@@ -23,7 +23,7 @@ function createRandomData()
 {
     var numDataItems = randomRangeInt(1, maxDataNum);
     var d = [];
-    for(var i = 0; i < numDataItems; i++) {
+    for(var i = 0; i < numDataItems; ++i) {
         var x = randomRangeInt(1, x_range);
         var y = randomRangeInt(1, y_range);
         d.push({'x': x, 'y': y});

@@ -63,7 +63,7 @@ class StarSimulator
     {
         var numDataItems = randomRangeInt(1, this.maxDataNum);
         var d = new Array(numDataItems);
-        for(var i = 0; i < numDataItems; i++)
+        for(var i = 0; i < numDataItems; ++i)
         {
             var x = randomRangeInt(1, this.xRange);
             var y = randomRangeInt(1, this.yRange);
