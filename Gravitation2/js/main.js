@@ -9,9 +9,9 @@ function randomRangeInt(lower, upper)
 }
 
 
-class Gravitation1
+class Gravitation2
 {
-    constructor(width, height, maxNodesNum = 512, scale = 4, maxSpeed = null, minSpeed = null)
+    constructor(width, height, depth = null, maxNodesNum = 512, scale = 4, maxSpeed = null, minSpeed = null)
     {
         // physics constants
         this.g = 9.81;
@@ -26,18 +26,24 @@ class Gravitation1
             bottom: 5
         };
         
-        this.radRange = [0.5,5];
+        this.radius = 3;
+        this.mass = this.radius * this.radius * this.radius * this.radius2mass;
         this.colorTable = ['rgb(255,255,255)',
             'rgb(192,255,255)', 'rgb(255,192,255)', 'rgb(255,255,192)',
             'rgb(255,192,192)', 'rgb(192,255,192)', 'rgb(192,192,255)',
             'rgb(128,255,255)', 'rgb(255,128,255)', 'rgb(255,255,128)',
             'rgb(255,128,128)', 'rgb(128,255,128)', 'rgb(128,128,255)'];
+        this.colorClose = { 'r': 0.5, 'g': 0.7, 'b': 1 }; // in linear scale [0,1]
+        this.colorFar = { 'r': 0.7, 'g': 0.5, 'b': 0.35 }; // in linear scale [0,1]
 
         this.simTick = 5; // ms
+        this.innerScale = 1 / 3;
 
         // options
         this.width = width;
         this.height = height;
+        if(!depth) this.depth = width;
+        else this.depth = depth;
         this.maxNodesNum = maxNodesNum;
 
         this.scale = scale;
@@ -50,7 +56,8 @@ class Gravitation1
             var yMaxSpeed = Math.sqrt(2 * this.yAcc * this.height);
             var yMaxTime = this.height * 2 / yMaxSpeed;
             var xMaxSpeed = this.width / (2 * yMaxTime);
-            this.maxSpeed = Math.sqrt(xMaxSpeed * xMaxSpeed + yMaxSpeed * yMaxSpeed);
+            var zMaxSpeed = this.depth / (2 * yMaxTime);
+            this.maxSpeed = Math.sqrt(xMaxSpeed * xMaxSpeed + yMaxSpeed * yMaxSpeed + zMaxSpeed * zMaxSpeed);
         }
         else
         {
@@ -76,17 +83,23 @@ class Gravitation1
     createRandomNode(i, that=null)
     {
         if(!that) that = this;
-        var radius = randomRange(that.radRange[0], that.radRange[1]);
+        var z = that.depth / 2;
         var speed = randomRange(that.minSpeed, that.maxSpeed);
-        var angleXY = randomRange(Math.PI * 0, Math.PI * 1);
+        var longitude = randomRange(0, Math.PI * 2);
+        var latitude = randomRange(Math.PI * 0.25, Math.PI * 0.5);
+        var speedXZ = speed * Math.cos(latitude);
         return {
-            'radius': radius,
-            'mass': radius * radius * radius * that.radius2mass,
-            'fill': that.colorTable[randomRangeInt(0, that.colorTable.length - 1)],
+            'radius': that.radius,
+            'mass': that.mass,
+            //'fill': 'rgb(255, 255, 255)',
+            //'fill': that.colorTable[randomRangeInt(0, that.colorTable.length - 1)],
             'x': that.width / 2,
             'y': that.height,
-            'vx': speed * Math.cos(angleXY),
-            'vy': speed * Math.sin(angleXY)
+            'z': z,
+            'vx': speedXZ * Math.cos(longitude),
+            'vy': speed * Math.sin(latitude),
+            'vz': speedXZ * Math.sin(longitude),
+            'depthScale': 1 - (1 - that.innerScale) * z / that.depth
         };
     }
 
@@ -113,8 +126,10 @@ class Gravitation1
         var nodesNum = nodes.length;
         var width = this.width;
         var height = this.height;
+        var depth = this.depth;
         var yAcc = this.yAcc;
         var yAccHalf = this.yAccHalf;
+        var innerScale = this.innerScale;
 
         for(var i = 0; i < nodesNum; ++i)
         {
@@ -126,6 +141,7 @@ class Gravitation1
             // update position
             node.x += node.vx;
             node.y += node.vy - yAccHalf;
+            node.z += node.vz;
 
             // collision detection
             if(node.x < 0)
@@ -144,12 +160,70 @@ class Gravitation1
                 node.y = height + height - node.y;
                 node.vy = yAcc - node.vy;
             }
+
+            if(node.z < 0)
+            { // reflect if hitting outer wall
+                node.z = -node.z;
+                node.vz = -node.vz;
+            }
+            else if(node.z > depth)
+            { // reflect if hitting inner wall
+                node.z = depth + depth - node.z;
+                node.vz = -node.vz;
+            }
+
+            // update hint
+            node.depthScale = 1 - (1 - innerScale) * node.z / depth;
         }
     }
 
     draw(nodes)
     {
         var that = this;
+
+        /*function scaleDepthFill(d)
+        {
+            var color = d3.color(d.fill);
+            color.r = Math.sqrt(color.r / 255) * d.depthScale;
+            color.r *= color.r * 255;
+            color.g = Math.sqrt(color.g / 255) * d.depthScale;
+            color.g *= color.g * 255;
+            color.b = Math.sqrt(color.b / 255) * d.depthScale;
+            color.b *= color.b * 255;
+            return color;
+        }*/
+
+        function scaleDepthFill(d)
+        {
+            var colorClose = that.colorClose;
+            var colorFar = that.colorFar;
+            var distance = d.z / that.depth;
+            var closeness = 1 - distance;
+            var r = colorFar.r * distance + colorClose.r * closeness;
+            r *= r * 255;
+            var g = colorFar.g * distance + colorClose.g * closeness;
+            g *= g * 255;
+            var b = colorFar.b * distance + colorClose.b * closeness;
+            b *= b * 255;
+            return d3.rgb(r, g, b);
+        }
+
+        function scaleDepthR(d)
+        {
+            return d.radius * d.depthScale;
+        }
+
+        function scaleDepthX(d)
+        {
+            var xCenter = that.width / 2;
+            return (d.x - xCenter) * d.depthScale + xCenter;
+        }
+
+        function scaleDepthY(d)
+        {
+            var yCenter = that.height / 2;
+            return (d.y - yCenter) * d.depthScale + yCenter;
+        }
 
         var dots = this.svg.selectAll('.dot')
             .data(nodes);
@@ -161,14 +235,16 @@ class Gravitation1
             .append('circle')
             .attr('class', 'dot')
             .attr('stroke-width', 0)
-            .attr('fill', function(d, i) { return d.fill; })
-            .attr('r', function(d, i) { return d.radius; })
-            .attr('cx', function(d, i) { return d.x; })
-            .attr('cy', function(d, i) { return d.y; });
+            .attr('fill', scaleDepthFill)
+            .attr('r', scaleDepthR)
+            .attr('cx', scaleDepthX)
+            .attr('cy', scaleDepthY);
 
         new_dots.merge(dots)
-            .attr('cx', function(d, i) { return d.x; })
-            .attr('cy', function(d, i) { return d.y; });
+            .attr('fill', scaleDepthFill)
+            .attr('r', scaleDepthR)
+            .attr('cx', scaleDepthX)
+            .attr('cy', scaleDepthY);
 
         // callback on end of transition
         window.requestAnimationFrame(function() { that.draw(nodes); })
@@ -192,7 +268,7 @@ class Gravitation1
 // Instantiation
 window.onload = function()
 {
-    var star_sim = new Gravitation1(
+    var star_sim = new Gravitation2(
         document.documentElement.clientWidth - 4,
         document.documentElement.clientHeight - 4);
 
