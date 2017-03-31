@@ -11,7 +11,7 @@ function randomRangeInt(lower, upper)
 
 class Gravitation1
 {
-    constructor(width, height, maxNodesNum = 1024, xMaxSpeed = null, yMaxSpeed = null)
+    constructor(width, height, maxNodesNum = 512, scale = 4, maxSpeed = null, minSpeed = null)
     {
         // physics constants
         this.g = 9.81;
@@ -33,19 +33,32 @@ class Gravitation1
             'rgb(128,255,255)', 'rgb(255,128,255)', 'rgb(255,255,128)',
             'rgb(255,128,128)', 'rgb(128,255,128)', 'rgb(128,128,255)'];
 
-        this.tickPerSecond = 50;
-        this.transitionTime = 1000 / this.tickPerSecond;
-        this.yAcc = this.g / this.tickPerSecond;
-        this.yAccHalf = this.yAcc / 2;
+        this.simTick = 5; // ms
 
         // options
         this.width = width;
         this.height = height;
         this.maxNodesNum = maxNodesNum;
-        if(!xMaxSpeed) this.xMaxSpeed = this.width / 5 / this.tickPerSecond;
-        else this.xMaxSpeed = xMaxSpeed;
-        if(!yMaxSpeed) this.yMaxSpeed = Math.sqrt(this.height * 2 * this.yAcc);
-        else this.yMaxSpeed = yMaxSpeed;
+
+        this.scale = scale;
+        this.simTickSec = this.simTick / 1000 * this.scale; // s
+        this.yAcc = this.g * this.simTickSec * this.simTickSec;
+        this.yAccHalf = this.yAcc / 2;
+
+        if(!maxSpeed)
+        {
+            var yMaxSpeed = Math.sqrt(2 * this.yAcc * this.height);
+            var yMaxTime = this.height * 2 / yMaxSpeed;
+            var xMaxSpeed = this.width / (2 * yMaxTime);
+            this.maxSpeed = Math.sqrt(xMaxSpeed * xMaxSpeed + yMaxSpeed * yMaxSpeed);
+        }
+        else
+        {
+            this.maxSpeed = maxSpeed * this.simTickSec;
+        }
+
+        if(!minSpeed) this.minSpeed = 1 * this.simTickSec;
+        else this.minSpeed = minSpeed;
 
         // initialization
         this.svg = d3.select("#vis")
@@ -64,14 +77,16 @@ class Gravitation1
     {
         if(!that) that = this;
         var radius = randomRange(that.radRange[0], that.radRange[1]);
+        var speed = randomRange(that.minSpeed, that.maxSpeed);
+        var angleXY = randomRange(Math.PI * 0.25, Math.PI * 0.75);
         return {
-            'x': that.width / 2,
-            'y': that.height,
-            'vx': randomRange(-that.xMaxSpeed, that.xMaxSpeed),
-            'vy': randomRange(-that.yMaxSpeed, 0),
             'radius': radius,
             'mass': radius * radius * radius * that.radius2mass,
-            'fill': that.colorTable[randomRangeInt(0, that.colorTable.length - 1)]
+            'fill': that.colorTable[randomRangeInt(0, that.colorTable.length - 1)],
+            'x': that.width / 2,
+            'y': that.height,
+            'vx': speed * Math.cos(angleXY),
+            'vy': speed * Math.sin(angleXY)
         };
     }
 
@@ -90,67 +105,51 @@ class Gravitation1
     simulate(nodes)
     {
         var that = this;
-        var nodesNum = nodes.length;
 
-        // initialize simulation
-        var simulation = d3.forceSimulation(nodes)
-            .alphaDecay(0)
-            .velocityDecay(0)
-            .stop();
+        // schedule the next tick
+        setTimeout(function() { that.simulate(nodes); }, this.simTick);
 
         // force simulation
-        var forceCustom = function()
+        var nodesNum = nodes.length;
+        var width = that.width;
+        var height = that.height;
+        var yAcc = that.yAcc;
+        var yAccHalf = that.yAccHalf;
+        var createRandomNode = that.createRandomNode;
+
+        for(var i = 0; i < nodesNum; ++i)
         {
-            var g = that.g;
-            var width = that.width;
-            var height = that.height;
-            var yAcc = that.yAcc;
-            var yAccHalf = that.yAccHalf;
-            var createRandomNode = that.createRandomNode;
+            var node = nodes[i];
 
-            for(var i = 0; i < nodesNum; ++i)
-            {
-                var node = nodes[i];
+            // gravitation
+            node.vy += yAcc;
 
-                // collision detection
-                /*if(node.x <= 0 || node.x >= width)
-                { // reset node if out of the left/right boundary
-                    node = createRandomNode(i, that);
-                }*/
-                if(node.x <= 0)
-                { // reflect if hitting left wall
-                    node.x = -node.x;
-                    node.vx = -node.vx;
-                }
-                else if(node.x >= width)
-                { // reflect if hitting right wall
-                    node.x = width + width - node.x;
-                    node.vx = -node.vx;
-                }
-                if(node.y >= height)
-                { // reflect if hitting the ground
-                    node.y = height + height - node.y;
-                    node.vy = -node.vy;
-                }
+            // update position
+            node.x += node.vx;
+            node.y += node.vy - yAccHalf;
 
-                // gravitation
-                node.vy += yAcc;
+            // collision detection
+            if(node.x < 0)
+            { // reflect if hitting left wall
+                node.x = -node.x;
+                node.vx = -node.vx;
             }
-        };
-
-        simulation.force('custom', forceCustom);
-
-        // draw and transition
-        this.draw(nodes, simulation);
+            else if(node.x > width)
+            { // reflect if hitting right wall
+                node.x = width + width - node.x;
+                node.vx = -node.vx;
+            }
+            if(node.y > height)
+            { // reflect if hitting the ground
+                node.y = height + height - node.y;
+                node.vy = yAcc - node.vy;
+            }
+        }
     }
 
-    draw(nodes, simulation)
+    draw(nodes)
     {
         var that = this;
-
-        var t = d3.transition()
-            .duration(this.transitionTime)
-            .ease(d3.easeLinear);
 
         var dots = this.svg.selectAll('.dot')
             .data(nodes);
@@ -168,30 +167,25 @@ class Gravitation1
             .attr('cy', function(d, i) { return d.y; });
 
         new_dots.merge(dots)
-            .transition(t)
-            .attr('fill', function(d, i) { return d.fill; })
-            .attr('r', function(d, i) { return d.radius; })
             .attr('cx', function(d, i) { return d.x; })
             .attr('cy', function(d, i) { return d.y; });
 
-        // update simulation
-        simulation.tick();
-
         // callback on end of transition
-        t.on('end', function() { that.draw(nodes, simulation); });
+        window.requestAnimationFrame(function() { that.draw(nodes); })
     }
 
     randomSimulate()
     {
-        var randomNodes = this.createRandomNodes();
-        this.simulate(randomNodes);
+        var that = this;
+        var nodes = this.createRandomNodes();
+        this.simulate(nodes);
+        window.requestAnimationFrame(function() { that.draw(nodes); });
     }
 
     Run()
     {
         this.randomSimulate();
     }
-
 }
 
 
