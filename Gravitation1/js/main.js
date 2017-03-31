@@ -78,7 +78,7 @@ class Gravitation1
         if(!that) that = this;
         var radius = randomRange(that.radRange[0], that.radRange[1]);
         var speed = randomRange(that.minSpeed, that.maxSpeed);
-        var angleXY = randomRange(Math.PI * 0.25, Math.PI * 0.75);
+        var angleXY = randomRange(Math.PI * 0, Math.PI * 1);
         return {
             'radius': radius,
             'mass': radius * radius * radius * that.radius2mass,
