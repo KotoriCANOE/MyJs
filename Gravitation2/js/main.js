@@ -119,79 +119,68 @@ class Gravitation2
     {
         var that = this;
 
-        // schedule the next tick
-        setTimeout(function() { that.simulate(nodes); }, this.simTick);
-
-        // force simulation
-        var nodesNum = nodes.length;
-        var width = this.width;
-        var height = this.height;
-        var depth = this.depth;
-        var yAcc = this.yAcc;
-        var yAccHalf = this.yAccHalf;
-        var innerScale = this.innerScale;
-
-        for(var i = 0; i < nodesNum; ++i)
+        // run continuously by ticks
+        d3.interval(function()
         {
-            var node = nodes[i];
+            var nodesNum = nodes.length;
+            var width = that.width;
+            var height = that.height;
+            var depth = that.depth;
+            var yAcc = that.yAcc;
+            var yAccHalf = that.yAccHalf;
+            var innerScale = that.innerScale;
 
-            // gravitation
-            node.vy += yAcc;
+            // force simulation
+            for(var i = 0; i < nodesNum; ++i)
+            {
+                var node = nodes[i];
 
-            // update position
-            node.x += node.vx;
-            node.y += node.vy - yAccHalf;
-            node.z += node.vz;
+                // gravitation
+                node.vy += yAcc;
 
-            // collision detection
-            if(node.x < 0)
-            { // reflect if hitting left wall
-                node.x = -node.x;
-                node.vx = -node.vx;
+                // update position
+                node.x += node.vx;
+                node.y += node.vy - yAccHalf;
+                node.z += node.vz;
+
+                // collision detection
+                if(node.x < 0)
+                { // reflect if hitting left wall
+                    node.x = -node.x;
+                    node.vx = -node.vx;
+                }
+                else if(node.x > width)
+                { // reflect if hitting right wall
+                    node.x = width + width - node.x;
+                    node.vx = -node.vx;
+                }
+
+                if(node.y > height)
+                { // reflect if hitting the ground
+                    node.y = height + height - node.y;
+                    node.vy = yAcc - node.vy;
+                }
+
+                if(node.z < 0)
+                { // reflect if hitting outer wall
+                    node.z = -node.z;
+                    node.vz = -node.vz;
+                }
+                else if(node.z > depth)
+                { // reflect if hitting inner wall
+                    node.z = depth + depth - node.z;
+                    node.vz = -node.vz;
+                }
+
+                // update hint
+                node.depthScale = 1 - (1 - innerScale) * node.z / depth;
             }
-            else if(node.x > width)
-            { // reflect if hitting right wall
-                node.x = width + width - node.x;
-                node.vx = -node.vx;
-            }
-
-            if(node.y > height)
-            { // reflect if hitting the ground
-                node.y = height + height - node.y;
-                node.vy = yAcc - node.vy;
-            }
-
-            if(node.z < 0)
-            { // reflect if hitting outer wall
-                node.z = -node.z;
-                node.vz = -node.vz;
-            }
-            else if(node.z > depth)
-            { // reflect if hitting inner wall
-                node.z = depth + depth - node.z;
-                node.vz = -node.vz;
-            }
-
-            // update hint
-            node.depthScale = 1 - (1 - innerScale) * node.z / depth;
-        }
+        }, this.simTick);
     }
 
     draw(nodes)
     {
         var that = this;
-
-        /*function scaleDepthFill(d)
-        {
-            var color = d3.color(d.fill);
-            color.r = Math.sqrt(color.r / 255) * d.depthScale;
-            color.r *= color.r * 255;
-            color.g = Math.sqrt(color.g / 255) * d.depthScale;
-            color.g *= color.g * 255;
-            color.b = Math.sqrt(color.b / 255) * d.depthScale;
-            color.b *= color.b * 255;
-            return color;
-        }*/
 
         function scaleDepthFill(d)
         {
@@ -225,26 +214,26 @@ class Gravitation2
             return (d.y - yCenter) * d.depthScale + yCenter;
         }
 
-        var dots = this.svg.selectAll('.dot')
-            .data(nodes);
+        d3.timer(function(elapsed)
+        {
+            var dots = that.svg.selectAll('.dot')
+                .data(nodes);
 
-        dots.exit()
-            .remove();
+            dots.exit()
+                .remove();
 
-        var new_dots = dots.enter()
-            .append('circle')
-            .attr('class', 'dot')
-            .attr('stroke-width', 0);
+            var new_dots = dots.enter()
+                .append('circle')
+                .attr('class', 'dot')
+                .attr('stroke-width', 0);
 
-        new_dots.merge(dots)
-            .attr('style', function(d) { return 'z-index: ' + Math.round(d.z) + ';'; }) // SVG2 feature
-            .attr('fill', scaleDepthFill)
-            .attr('r', scaleDepthR)
-            .attr('cx', scaleDepthX)
-            .attr('cy', scaleDepthY);
-
-        // callback for next frame
-        window.requestAnimationFrame(function() { that.draw(nodes); })
+            new_dots.merge(dots)
+                .attr('style', function(d) { return 'z-index: ' + Math.round(d.z) + ';'; }) // SVG2 feature
+                .attr('fill', scaleDepthFill)
+                .attr('r', scaleDepthR)
+                .attr('cx', scaleDepthX)
+                .attr('cy', scaleDepthY);
+        });
     }
 
     randomSimulate()
@@ -252,7 +241,7 @@ class Gravitation2
         var that = this;
         var nodes = this.createRandomNodes();
         this.simulate(nodes);
-        window.requestAnimationFrame(function() { that.draw(nodes); });
+        this.draw(nodes);
     }
 
     Run()
@@ -265,9 +254,9 @@ class Gravitation2
 // Instantiation
 window.onload = function()
 {
-    var star_sim = new Gravitation2(
+    var instance = new Gravitation2(
         document.documentElement.clientWidth - 4,
         document.documentElement.clientHeight - 4);
 
-    star_sim.Run();
+    instance.Run();
 }

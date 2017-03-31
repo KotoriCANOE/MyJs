@@ -100,72 +100,71 @@ class Gravitation1
     {
         var that = this;
 
-        // schedule the next tick
-        setTimeout(function() { that.simulate(nodes); }, this.simTick);
-
-        // force simulation
-        var nodesNum = nodes.length;
-        var width = this.width;
-        var height = this.height;
-        var yAcc = this.yAcc;
-        var yAccHalf = this.yAccHalf;
-
-        for(var i = 0; i < nodesNum; ++i)
+        // run continuously by ticks
+        d3.interval(function()
         {
-            var node = nodes[i];
+            var nodesNum = nodes.length;
+            var width = that.width;
+            var height = that.height;
+            var yAcc = that.yAcc;
+            var yAccHalf = that.yAccHalf;
 
-            // gravitation
-            node.vy += yAcc;
+            // force simulation
+            for(var i = 0; i < nodesNum; ++i)
+            {
+                var node = nodes[i];
 
-            // update position
-            node.x += node.vx;
-            node.y += node.vy - yAccHalf;
+                // gravitation
+                node.vy += yAcc;
 
-            // collision detection
-            if(node.x < 0)
-            { // reflect if hitting left wall
-                node.x = -node.x;
-                node.vx = -node.vx;
+                // update position
+                node.x += node.vx;
+                node.y += node.vy - yAccHalf;
+
+                // collision detection
+                if(node.x < 0)
+                { // reflect if hitting left wall
+                    node.x = -node.x;
+                    node.vx = -node.vx;
+                }
+                else if(node.x > width)
+                { // reflect if hitting right wall
+                    node.x = width + width - node.x;
+                    node.vx = -node.vx;
+                }
+
+                if(node.y > height)
+                { // reflect if hitting the ground
+                    node.y = height + height - node.y;
+                    node.vy = yAcc - node.vy;
+                }
             }
-            else if(node.x > width)
-            { // reflect if hitting right wall
-                node.x = width + width - node.x;
-                node.vx = -node.vx;
-            }
-
-            if(node.y > height)
-            { // reflect if hitting the ground
-                node.y = height + height - node.y;
-                node.vy = yAcc - node.vy;
-            }
-        }
+        }, this.simTick);
     }
 
     draw(nodes)
     {
         var that = this;
 
-        var dots = this.svg.selectAll('.dot')
-            .data(nodes);
+        d3.timer(function(elapsed)
+        {
+            var dots = that.svg.selectAll('.dot')
+                .data(nodes);
 
-        dots.exit()
-            .remove();
+            dots.exit()
+                .remove();
 
-        var new_dots = dots.enter()
-            .append('circle')
-            .attr('class', 'dot')
-            .attr('stroke-width', 0)
-            .attr('fill', function(d, i) { return d.fill; })
-            .attr('r', function(d, i) { return d.radius; })
-            .attr('cx', function(d, i) { return d.x; })
-            .attr('cy', function(d, i) { return d.y; });
+            var new_dots = dots.enter()
+                .append('circle')
+                .attr('class', 'dot')
+                .attr('stroke-width', 0)
+                .attr('fill', function(d, i) { return d.fill; })
+                .attr('r', function(d, i) { return d.radius; });
 
-        new_dots.merge(dots)
-            .attr('cx', function(d, i) { return d.x; })
-            .attr('cy', function(d, i) { return d.y; });
-
-        // callback for next frame
-        window.requestAnimationFrame(function() { that.draw(nodes); })
+            new_dots.merge(dots)
+                .attr('cx', function(d, i) { return d.x; })
+                .attr('cy', function(d, i) { return d.y; });
+        });
     }
 
     randomSimulate()
@@ -173,7 +172,7 @@ class Gravitation1
         var that = this;
         var nodes = this.createRandomNodes();
         this.simulate(nodes);
-        window.requestAnimationFrame(function() { that.draw(nodes); });
+        this.draw(nodes);
     }
 
     Run()
@@ -186,9 +185,9 @@ class Gravitation1
 // Instantiation
 window.onload = function()
 {
-    var star_sim = new Gravitation1(
+    var instance = new Gravitation1(
         document.documentElement.clientWidth - 4,
         document.documentElement.clientHeight - 4);
 
-    star_sim.Run();
+    instance.Run();
 }

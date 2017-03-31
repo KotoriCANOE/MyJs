@@ -224,9 +224,9 @@ class StarSimulator
 // Instantiation
 window.onload = function()
 {
-    var star_sim = new StarSimulator(
+    var instance = new StarSimulator(
         document.documentElement.clientWidth - 4,
         document.documentElement.clientHeight - 4);
 
-    star_sim.Run();
+    instance.Run();
 }
