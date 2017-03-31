@@ -14,7 +14,9 @@ class Gravitation1
     constructor(width, height, maxNodesNum = 1024, xMaxSpeed = null, yMaxSpeed = null)
     {
         // physics constants
-        this.g = 9.81
+        this.g = 9.81;
+        this.density = 1;
+        this.radius2mass = 4 / 3 * Math.PI * this.density;
 
         // constants
         this.margin = {
@@ -31,7 +33,7 @@ class Gravitation1
             'rgb(128,255,255)', 'rgb(255,128,255)', 'rgb(255,255,128)',
             'rgb(255,128,128)', 'rgb(128,255,128)', 'rgb(128,128,255)'];
 
-        this.tickPerSecond = 25;
+        this.tickPerSecond = 50;
         this.transitionTime = 1000 / this.tickPerSecond;
         this.yAcc = this.g / this.tickPerSecond;
         this.yAccHalf = this.yAcc / 2;
@@ -61,13 +63,14 @@ class Gravitation1
     createRandomNode(i, that=null)
     {
         if(!that) that = this;
+        var radius = randomRange(that.radRange[0], that.radRange[1]);
         return {
-            'index': i,
             'x': that.width / 2,
             'y': that.height,
             'vx': randomRange(-that.xMaxSpeed, that.xMaxSpeed),
             'vy': randomRange(-that.yMaxSpeed, 0),
-            'radius': randomRange(that.radRange[0], that.radRange[1]),
+            'radius': radius,
+            'mass': radius * radius * radius * that.radius2mass,
             'fill': that.colorTable[randomRangeInt(0, that.colorTable.length - 1)]
         };
     }
@@ -90,16 +93,12 @@ class Gravitation1
         var nodesNum = nodes.length;
 
         // initialize simulation
-        var simulation = d3.forceSimulation()
+        var simulation = d3.forceSimulation(nodes)
             .alphaDecay(0)
             .velocityDecay(0)
             .stop();
 
         // force simulation
-        var forceCollide = d3.forceCollide()
-            .strength(1)
-            .iterations(1);
-
         var forceCustom = function()
         {
             var g = that.g;
@@ -113,38 +112,33 @@ class Gravitation1
             {
                 var node = nodes[i];
 
-                // gravitation
-                node.vy += yAcc;
-
-                // update position
-                node.x += node.vx;
-                node.y += node.vy - yAccHalf;
-
                 // collision detection
-                /*if(node.x < 0 || node.x > width)
+                /*if(node.x <= 0 || node.x >= width)
                 { // reset node if out of the left/right boundary
                     node = createRandomNode(i, that);
                 }*/
-                if(node.x < 0)
+                if(node.x <= 0)
                 { // reflect if hitting left wall
                     node.x = -node.x;
                     node.vx = -node.vx;
                 }
-                else if(node.x > width)
+                else if(node.x >= width)
                 { // reflect if hitting right wall
                     node.x = width + width - node.x;
                     node.vx = -node.vx;
                 }
-                else if(node.y > height)
+                if(node.y >= height)
                 { // reflect if hitting the ground
                     node.y = height + height - node.y;
-                    node.vy = -node.vy + yAcc;
+                    node.vy = -node.vy;
                 }
+
+                // gravitation
+                node.vy += yAcc;
             }
         };
 
-        simulation//.force('collide', forceCollide)
-            .force('custom', forceCustom);
+        simulation.force('custom', forceCustom);
 
         // draw and transition
         this.draw(nodes, simulation);
@@ -153,7 +147,7 @@ class Gravitation1
     draw(nodes, simulation)
     {
         var that = this;
-        
+
         var t = d3.transition()
             .duration(this.transitionTime)
             .ease(d3.easeLinear);
@@ -167,7 +161,7 @@ class Gravitation1
         var new_dots = dots.enter()
             .append('circle')
             .attr('class', 'dot')
-            .attr('stroke', 'none')
+            .attr('stroke-width', 0)
             .attr('fill', function(d, i) { return d.fill; })
             .attr('r', function(d, i) { return d.radius; })
             .attr('cx', function(d, i) { return d.x; })
