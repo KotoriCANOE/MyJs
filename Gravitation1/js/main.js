@@ -170,7 +170,7 @@ class Gravitation1
             .attr('cx', function(d, i) { return d.x; })
             .attr('cy', function(d, i) { return d.y; });
 
-        // callback on end of transition
+        // callback for next frame
         window.requestAnimationFrame(function() { that.draw(nodes); })
     }
 

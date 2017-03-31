@@ -86,7 +86,7 @@ class Gravitation2
         var z = that.depth / 2;
         var speed = randomRange(that.minSpeed, that.maxSpeed);
         var longitude = randomRange(0, Math.PI * 2);
-        var latitude = randomRange(Math.PI * 0.25, Math.PI * 0.5);
+        var latitude = randomRange(Math.PI * -0.5, Math.PI * 0.5);
         var speedXZ = speed * Math.cos(latitude);
         return {
             'radius': that.radius,
@@ -94,7 +94,7 @@ class Gravitation2
             //'fill': 'rgb(255, 255, 255)',
             //'fill': that.colorTable[randomRangeInt(0, that.colorTable.length - 1)],
             'x': that.width / 2,
-            'y': that.height,
+            'y': that.height / 2,
             'z': z,
             'vx': speedXZ * Math.cos(longitude),
             'vy': speed * Math.sin(latitude),
@@ -246,7 +246,7 @@ class Gravitation2
             .attr('cx', scaleDepthX)
             .attr('cy', scaleDepthY);
 
-        // callback on end of transition
+        // callback for next frame
         window.requestAnimationFrame(function() { that.draw(nodes); })
     }
 
