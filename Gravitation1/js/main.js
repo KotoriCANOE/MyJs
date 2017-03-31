@@ -27,12 +27,6 @@ class Gravitation1
         };
         
         this.radRange = [0.5,5];
-        this.colorTable = ['rgb(255,255,255)',
-            'rgb(192,255,255)', 'rgb(255,192,255)', 'rgb(255,255,192)',
-            'rgb(255,192,192)', 'rgb(192,255,192)', 'rgb(192,192,255)',
-            'rgb(128,255,255)', 'rgb(255,128,255)', 'rgb(255,255,128)',
-            'rgb(255,128,128)', 'rgb(128,255,128)', 'rgb(128,128,255)'];
-
         this.simTick = 5; // ms
 
         // options
@@ -78,13 +72,13 @@ class Gravitation1
         if(!that) that = this;
         var radius = randomRange(that.radRange[0], that.radRange[1]);
         var speed = randomRange(that.minSpeed, that.maxSpeed);
-        var angleXY = randomRange(Math.PI * 0, Math.PI * 1);
+        var angleXY = randomRange(Math.PI * 0, Math.PI * 2);
         return {
             'radius': radius,
             'mass': radius * radius * radius * that.radius2mass,
-            'fill': that.colorTable[randomRangeInt(0, that.colorTable.length - 1)],
+            'fill': d3.hsl(randomRange(0, 360), 2 / 3, .5),
             'x': that.width / 2,
-            'y': that.height,
+            'y': that.height / 2,
             'vx': speed * Math.cos(angleXY),
             'vy': speed * Math.sin(angleXY)
         };

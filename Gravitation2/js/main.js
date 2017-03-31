@@ -234,13 +234,10 @@ class Gravitation2
         var new_dots = dots.enter()
             .append('circle')
             .attr('class', 'dot')
-            .attr('stroke-width', 0)
-            .attr('fill', scaleDepthFill)
-            .attr('r', scaleDepthR)
-            .attr('cx', scaleDepthX)
-            .attr('cy', scaleDepthY);
+            .attr('stroke-width', 0);
 
         new_dots.merge(dots)
+            .attr('style', function(d) { return 'z-index: ' + Math.round(d.z) + ';'; }) // SVG2 feature
             .attr('fill', scaleDepthFill)
             .attr('r', scaleDepthR)
             .attr('cx', scaleDepthX)
