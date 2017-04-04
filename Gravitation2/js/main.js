@@ -9,6 +9,31 @@ function randomRangeInt(lower, upper)
 }
 
 
+class Vector3
+{
+    constructor(x, y, z)
+    {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    copy() { return new Vector3(this.x, this.y, this.z); }
+    length() { return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z); }
+    sqrLength() { return this.x * this.x + this.y * this.y + this.z * this.z; }
+    normalize() { var inv = 1/this.length(); return new Vector3(this.x * inv, this.y * inv, this.z * inv); }
+    negate() { return new Vector3(-this.x, -this.y, -this.z); }
+    add(v) { return new Vector3(this.x + v.x, this.y + v.y, this.z + v.z); }
+    subtract(v) { return new Vector3(this.x - v.x, this.y - v.y, this.z - v.z); }
+    multiply(f) { return new Vector3(this.x * f, this.y * f, this.z * f); }
+    divide(f) { var invf = 1/f; return new Vector3(this.x * invf, this.y * invf, this.z * invf); }
+    dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }
+    cross(v) { return new Vector3(-this.z * v.y + this.y * v.z, this.z * v.x - this.x * v.z, -this.y * v.x + this.x * v.y); }
+}
+
+Vector3.zero = new Vector3(0, 0, 0);
+
+
 class Gravitation2
 {
     constructor(width, height, depth = null, maxNodesNum = 512, scale = 4, maxSpeed = null, minSpeed = null)
@@ -91,14 +116,9 @@ class Gravitation2
         return {
             'radius': that.radius,
             'mass': that.mass,
-            //'fill': 'rgb(255, 255, 255)',
-            //'fill': that.colorTable[randomRangeInt(0, that.colorTable.length - 1)],
-            'x': that.width / 2,
-            'y': that.height / 2,
-            'z': z,
-            'vx': speedXZ * Math.cos(longitude),
-            'vy': speed * Math.sin(latitude),
-            'vz': speedXZ * Math.sin(longitude),
+            'position': new Vector3(that.width / 2, that.height / 2, z),
+            'velocity': new Vector3(speedXZ * Math.cos(longitude),
+                speed * Math.sin(latitude), speedXZ * Math.sin(longitude)),
             'depthScale': 1 - (1 - that.innerScale) * z / that.depth
         };
     }
@@ -134,46 +154,48 @@ class Gravitation2
             for(var i = 0; i < nodesNum; ++i)
             {
                 var node = nodes[i];
+                var pos = node.position;
+                var vel = node.velocity;
 
                 // gravitation
-                node.vy += yAcc;
+                vel.y += yAcc;
 
                 // update position
-                node.x += node.vx;
-                node.y += node.vy - yAccHalf;
-                node.z += node.vz;
+                pos.x += vel.x;
+                pos.y += vel.y - yAccHalf;
+                pos.z += vel.z;
 
                 // collision detection
-                if(node.x < 0)
+                if(pos.x < 0)
                 { // reflect if hitting left wall
-                    node.x = -node.x;
-                    node.vx = -node.vx;
+                    pos.x = -pos.x;
+                    vel.x = -vel.x;
                 }
-                else if(node.x > width)
+                else if(pos.x > width)
                 { // reflect if hitting right wall
-                    node.x = width + width - node.x;
-                    node.vx = -node.vx;
+                    pos.x = width + width - pos.x;
+                    vel.x = -vel.x;
                 }
 
-                if(node.y > height)
+                if(pos.y > height)
                 { // reflect if hitting the ground
-                    node.y = height + height - node.y;
-                    node.vy = yAcc - node.vy;
+                    pos.y = height + height - pos.y;
+                    vel.y = yAcc - vel.y;
                 }
 
-                if(node.z < 0)
+                if(pos.z < 0)
                 { // reflect if hitting outer wall
-                    node.z = -node.z;
-                    node.vz = -node.vz;
+                    pos.z = -pos.z;
+                    vel.z = -vel.z;
                 }
-                else if(node.z > depth)
+                else if(pos.z > depth)
                 { // reflect if hitting inner wall
-                    node.z = depth + depth - node.z;
-                    node.vz = -node.vz;
+                    pos.z = depth + depth - pos.z;
+                    vel.z = -vel.z;
                 }
 
                 // update hint
-                node.depthScale = 1 - (1 - innerScale) * node.z / depth;
+                node.depthScale = 1 - (1 - innerScale) * pos.z / depth;
             }
         }, this.simTick);
     }
@@ -186,13 +208,13 @@ class Gravitation2
         {
             var colorClose = that.colorClose;
             var colorFar = that.colorFar;
-            var distance = d.z / that.depth;
-            var closeness = 1 - distance;
-            var r = colorFar.r * distance + colorClose.r * closeness;
+            var zDistance = d.position.z / that.depth;
+            var closeness = 1 - zDistance;
+            var r = colorFar.r * zDistance + colorClose.r * closeness;
             r *= r * 255;
-            var g = colorFar.g * distance + colorClose.g * closeness;
+            var g = colorFar.g * zDistance + colorClose.g * closeness;
             g *= g * 255;
-            var b = colorFar.b * distance + colorClose.b * closeness;
+            var b = colorFar.b * zDistance + colorClose.b * closeness;
             b *= b * 255;
             return d3.rgb(r, g, b);
         }
@@ -205,13 +227,13 @@ class Gravitation2
         function scaleDepthX(d)
         {
             var xCenter = that.width / 2;
-            return (d.x - xCenter) * d.depthScale + xCenter;
+            return (d.position.x - xCenter) * d.depthScale + xCenter;
         }
 
         function scaleDepthY(d)
         {
             var yCenter = that.height / 2;
-            return (d.y - yCenter) * d.depthScale + yCenter;
+            return (d.position.y - yCenter) * d.depthScale + yCenter;
         }
 
         d3.timer(function(elapsed)
@@ -228,7 +250,7 @@ class Gravitation2
                 .attr('stroke-width', 0);
 
             new_dots.merge(dots)
-                .attr('style', function(d) { return 'z-index: ' + Math.round(d.z) + ';'; }) // SVG2 feature
+                .attr('style', function(d) { return 'z-index: ' + Math.round(d.position.z) + ';'; }) // SVG2 feature
                 .attr('fill', scaleDepthFill)
                 .attr('r', scaleDepthR)
                 .attr('cx', scaleDepthX)
