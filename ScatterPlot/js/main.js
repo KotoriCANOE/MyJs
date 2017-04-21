@@ -108,7 +108,7 @@ function updateDots(data)
 
     var new_dots = dots.enter()
         .append('circle')
-        .attr('class', 'dot')
+        .classed('dot', true)
         .attr('fill', 'white')
         .attr('stroke', 'gray')
         .attr('r', 0)

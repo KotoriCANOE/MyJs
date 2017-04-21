@@ -1,6 +1,6 @@
 class Gravitation2
 {
-    constructor(width, height, depth = null, maxNodesNum = 512, scale = 4, maxSpeed = null, minSpeed = null)
+    constructor(width, height, depth = null, maxNodesNum = 2048, scale = 4, maxSpeed = null, minSpeed = null)
     {
         // physics constants
         this.g = 9.81;
@@ -17,11 +17,6 @@ class Gravitation2
         
         this.radius = 3;
         this.mass = this.radius * this.radius * this.radius * this.radius2mass;
-        this.colorTable = ['rgb(255,255,255)',
-            'rgb(192,255,255)', 'rgb(255,192,255)', 'rgb(255,255,192)',
-            'rgb(255,192,192)', 'rgb(192,255,192)', 'rgb(192,192,255)',
-            'rgb(128,255,255)', 'rgb(255,128,255)', 'rgb(255,255,128)',
-            'rgb(255,128,128)', 'rgb(128,255,128)', 'rgb(128,128,255)'];
         this.colorClose = { 'r': 0.5, 'g': 0.7, 'b': 1 }; // in linear scale [0,1]
         this.colorFar = { 'r': 0.7, 'g': 0.5, 'b': 0.35 }; // in linear scale [0,1]
 
@@ -57,15 +52,18 @@ class Gravitation2
         else this.minSpeed = minSpeed;
 
         // initialization
-        this.svg = d3.select("#vis")
-            .append("svg")
+        this.canvas = d3.select("#vis")
+            .append("canvas")
                 .attr('width', this.width)
-                .attr('height', this.height)
-            .append('g')
-                .attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')');
+                .attr('height', this.height);
+        this.context = this.canvas.node().getContext('2d');
 
+        this.context.translate(this.margin.left, this.margin.top);
         this.width -= this.margin.left + this.margin.right;
         this.height -= this.margin.top + this.margin.bottom;
+
+        var detachedContainer = document.createElement('custom');
+        this.dataContainer = d3.select(detachedContainer);
 
         this.depthScale = d3.scaleLinear()
             .domain([0, this.depth])
@@ -197,25 +195,64 @@ class Gravitation2
             return (d.position.y - yCenter) * that.depthScale(d.position.z) + yCenter;
         }
 
+        var lastElapsed = 0;
+        var duration50 = new Array(50);
+        var durationIndex = 0;
+
         d3.timer(function(elapsed)
         {
-            var dots = that.svg.selectAll('.dot')
+            // sort nodes by descending z-depth
+            nodes.sort(function(a, b)
+            {
+                return b.position.z - a.position.z;
+            });
+
+            // D3 data binding
+            var dataBinding = that.dataContainer.selectAll('custom.circle')
                 .data(nodes);
 
-            dots.exit()
+            dataBinding.exit()
                 .remove();
 
-            var new_dots = dots.enter()
-                .append('circle')
-                .attr('class', 'dot')
+            var dataBindingNew = dataBinding.enter()
+                .append('custom')
+                .classed('circle', true)
                 .attr('stroke-width', 0);
 
-            new_dots.merge(dots)
-                .attr('style', function(d) { return 'z-index: ' + Math.round(d.position.z) + ';'; }) // SVG2 feature
-                .attr('fill', scaleDepthFill)
+            dataBindingNew.merge(dataBinding)
+                .attr('x', scaleDepthX)
+                .attr('y', scaleDepthY)
                 .attr('r', scaleDepthR)
-                .attr('cx', scaleDepthX)
-                .attr('cy', scaleDepthY);
+                .attr('fillStyle', scaleDepthFill);
+
+            // Canvas
+            var context = that.context;
+            var PI2 = Math.PI * 2;
+
+            context.clearRect(-that.margin.left, -that.margin.top,
+                that.canvas.attr('width'), that.canvas.attr('height'));
+
+            dataBinding.each(function(d)
+            {
+                var node = d3.select(this);
+
+                context.fillStyle = node.attr('fillStyle');
+                context.beginPath();
+                context.arc(node.attr('x'), node.attr('y'), node.attr('r'), 0, PI2);
+                context.closePath();
+                context.fill();
+            });
+
+            // draw FPS
+            var duration = elapsed - lastElapsed;
+            lastElapsed = elapsed;
+            duration50[durationIndex] = duration;
+            durationIndex = ++durationIndex % 50;
+            var fps = 50000 / duration50.reduce(function(a, b){ return a + b; }, 0);
+
+            context.font = '15px Consolas';
+            context.fillStyle = 'white';
+            context.fillText('FPS: ' + fps, 10, 10);
         });
     }
 

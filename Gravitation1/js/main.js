@@ -145,7 +145,7 @@ class Gravitation1
 
             var new_dots = dots.enter()
                 .append('circle')
-                .attr('class', 'dot')
+                .classed('dot', true)
                 .attr('stroke-width', 0)
                 .attr('fill', function(d, i) { return d.fill; })
                 .attr('r', function(d, i) { return d.radius; });

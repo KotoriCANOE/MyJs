@@ -4,11 +4,6 @@ class StarSimulator
     {
         // constants
         this.radRange = [0.5,2.5];
-        this.colorTable = ['rgb(255,255,255)',
-            'rgb(192,255,255)', 'rgb(255,192,255)', 'rgb(255,255,192)',
-            'rgb(255,192,192)', 'rgb(192,255,192)', 'rgb(192,192,255)',
-            'rgb(128,255,255)', 'rgb(255,128,255)', 'rgb(255,255,128)',
-            'rgb(255,128,128)', 'rgb(128,255,128)', 'rgb(128,128,255)'];
         this.margin = {
             left: 5,
             top: 5,
@@ -173,8 +168,8 @@ class StarSimulator
 
         var new_dots = dots.enter()
             .append('circle')
-            .attr('class', 'dot')
-            .attr('fill', function() { return that.colorTable[randomRangeInt(0, that.colorTable.length - 1)]; } )
+            .classed('dot', true)
+            .attr('fill', function() { return ColorTable.t1[randomRangeInt(0, ColorTable.t1.length - 1)]; } )
             .attr('stroke', 'gray')
             .attr('r', 0)
             .each(function(d, i){
