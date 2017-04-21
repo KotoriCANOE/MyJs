@@ -1,39 +1,3 @@
-function randomRange(lower, upper)
-{
-    return Math.random() * (upper - lower) + lower;
-}
-
-function randomRangeInt(lower, upper)
-{
-    return Math.floor(Math.random() * (upper - lower + 1) + lower);
-}
-
-
-class Vector3
-{
-    constructor(x, y, z)
-    {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
-
-    copy() { return new Vector3(this.x, this.y, this.z); }
-    length() { return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z); }
-    sqrLength() { return this.x * this.x + this.y * this.y + this.z * this.z; }
-    normalize() { var inv = 1/this.length(); return new Vector3(this.x * inv, this.y * inv, this.z * inv); }
-    negate() { return new Vector3(-this.x, -this.y, -this.z); }
-    add(v) { return new Vector3(this.x + v.x, this.y + v.y, this.z + v.z); }
-    subtract(v) { return new Vector3(this.x - v.x, this.y - v.y, this.z - v.z); }
-    multiply(f) { return new Vector3(this.x * f, this.y * f, this.z * f); }
-    divide(f) { var invf = 1/f; return new Vector3(this.x * invf, this.y * invf, this.z * invf); }
-    dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }
-    cross(v) { return new Vector3(-this.z * v.y + this.y * v.z, this.z * v.x - this.x * v.z, -this.y * v.x + this.x * v.y); }
-}
-
-Vector3.zero = new Vector3(0, 0, 0);
-
-
 class Gravitation2
 {
     constructor(width, height, depth = null, maxNodesNum = 512, scale = 4, maxSpeed = null, minSpeed = null)
@@ -73,12 +37,12 @@ class Gravitation2
 
         this.scale = scale;
         this.simTickSec = this.simTick / 1000 * this.scale; // s
-        this.yAcc = this.g * this.simTickSec * this.simTickSec;
-        this.yAccHalf = this.yAcc / 2;
+        var yAcc = this.g * this.simTickSec * this.simTickSec;
+        this.gravity = new Vector3(0, yAcc, 0);
 
         if(!maxSpeed)
         {
-            var yMaxSpeed = Math.sqrt(2 * this.yAcc * this.height);
+            var yMaxSpeed = Math.sqrt(2 * yAcc * this.height);
             var yMaxTime = this.height * 2 / yMaxSpeed;
             var xMaxSpeed = this.width / (2 * yMaxTime);
             var zMaxSpeed = this.depth / (2 * yMaxTime);
@@ -102,25 +66,30 @@ class Gravitation2
 
         this.width -= this.margin.left + this.margin.right;
         this.height -= this.margin.top + this.margin.bottom;
+
+        this.depthScale = d3.scaleLinear()
+            .domain([0, this.depth])
+            .range([1, this.innerScale]);
     }
 
     // Helper methods
     createRandomNode(i, that=null)
     {
         if(!that) that = this;
-        var z = that.depth / 2;
         var speed = randomRange(that.minSpeed, that.maxSpeed);
         var longitude = randomRange(0, Math.PI * 2);
         var latitude = randomRange(Math.PI * -0.5, Math.PI * 0.5);
         var speedXZ = speed * Math.cos(latitude);
-        return {
-            'radius': that.radius,
-            'mass': that.mass,
-            'position': new Vector3(that.width / 2, that.height / 2, z),
-            'velocity': new Vector3(speedXZ * Math.cos(longitude),
+
+        return new Particle3D(
+            new Vector3(that.width / 2, that.height / 2, that.depth / 2),
+            new Vector3(speedXZ * Math.cos(longitude),
                 speed * Math.sin(latitude), speedXZ * Math.sin(longitude)),
-            'depthScale': 1 - (1 - that.innerScale) * z / that.depth
-        };
+            that.gravity,
+            that.radius,
+            null,
+            Infinity
+        )
     }
 
     createRandomNodes()
@@ -146,26 +115,21 @@ class Gravitation2
             var width = that.width;
             var height = that.height;
             var depth = that.depth;
-            var yAcc = that.yAcc;
-            var yAccHalf = that.yAccHalf;
+            var gravity = that.gravity;
             var innerScale = that.innerScale;
 
-            // force simulation
+            // kinetic simulation
             for(var i = 0; i < nodesNum; ++i)
             {
                 var node = nodes[i];
                 var pos = node.position;
                 var vel = node.velocity;
+                var yAcc = node.acceleration.y;
 
-                // gravitation
-                vel.y += yAcc;
+                // update
+                node.kinetic();
 
-                // update position
-                pos.x += vel.x;
-                pos.y += vel.y - yAccHalf;
-                pos.z += vel.z;
-
-                // collision detection
+                // boundary reflection
                 if(pos.x < 0)
                 { // reflect if hitting left wall
                     pos.x = -pos.x;
@@ -193,9 +157,6 @@ class Gravitation2
                     pos.z = depth + depth - pos.z;
                     vel.z = -vel.z;
                 }
-
-                // update hint
-                node.depthScale = 1 - (1 - innerScale) * pos.z / depth;
             }
         }, this.simTick);
     }
@@ -221,19 +182,19 @@ class Gravitation2
 
         function scaleDepthR(d)
         {
-            return d.radius * d.depthScale;
+            return d.radius * that.depthScale(d.position.z);
         }
 
         function scaleDepthX(d)
         {
             var xCenter = that.width / 2;
-            return (d.position.x - xCenter) * d.depthScale + xCenter;
+            return (d.position.x - xCenter) * that.depthScale(d.position.z) + xCenter;
         }
 
         function scaleDepthY(d)
         {
             var yCenter = that.height / 2;
-            return (d.position.y - yCenter) * d.depthScale + yCenter;
+            return (d.position.y - yCenter) * that.depthScale(d.position.z) + yCenter;
         }
 
         d3.timer(function(elapsed)

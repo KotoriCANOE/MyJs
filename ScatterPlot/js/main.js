@@ -1,13 +1,3 @@
-function randomRange(lower, upper)
-{
-    return Math.random() * (upper - lower) + lower;
-}
-
-function randomRangeInt(lower, upper)
-{
-    return Math.floor(Math.random() * (upper - lower + 1) + lower);
-}
-
 var length = Math.min(document.documentElement.clientWidth, document.documentElement.clientHeight) * 0.92;
 var width = length;
 var height = length;
