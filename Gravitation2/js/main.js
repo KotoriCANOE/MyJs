@@ -207,38 +207,28 @@ class Gravitation2
                 return b.position.z - a.position.z;
             });
 
-            // D3 data binding
-            var dataBinding = that.dataContainer.selectAll('custom.circle')
-                .data(nodes);
-
-            dataBinding.exit()
-                .remove();
-
-            var dataBindingNew = dataBinding.enter()
-                .append('custom')
-                .classed('circle', true)
-                .attr('stroke-width', 0);
-
-            dataBindingNew.merge(dataBinding)
-                .attr('x', scaleDepthX)
-                .attr('y', scaleDepthY)
-                .attr('r', scaleDepthR)
-                .attr('fillStyle', scaleDepthFill);
-
-            // Canvas
+            // Canvas drawing
             var context = that.context;
-            var PI2 = Math.PI * 2;
 
             context.clearRect(-that.margin.left, -that.margin.top,
                 that.canvas.attr('width'), that.canvas.attr('height'));
 
-            dataBinding.each(function(d)
-            {
-                var node = d3.select(this);
+            var PI2 = Math.PI * 2;
+            var xCenter = that.width / 2;
+            var yCenter = that.height / 2;
 
-                context.fillStyle = node.attr('fillStyle');
+            nodes.forEach(function(d)
+            {
+                var pos = d.position;
+                var depthScale = that.depthScale(pos.z);
+
+                context.fillStyle = scaleDepthFill(d);
                 context.beginPath();
-                context.arc(node.attr('x'), node.attr('y'), node.attr('r'), 0, PI2);
+                context.arc(
+                    (pos.x - xCenter) * depthScale + xCenter,
+                    (pos.y - yCenter) * depthScale + yCenter,
+                    d.radius * depthScale,
+                    0, PI2);
                 context.closePath();
                 context.fill();
             });
