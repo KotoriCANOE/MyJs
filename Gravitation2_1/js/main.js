@@ -1,6 +1,6 @@
-class Gravitation2
+class Gravitation2_1
 {
-    constructor(width, height, depth = null, maxNodesNum = 2048, scale = 4, maxSpeed = null, minSpeed = null)
+    constructor(width, height, depth = null, maxNodesNum = 1024, scale = 4, maxSpeed = null, minSpeed = null)
     {
         // physics constants
         this.g = 9.81;
@@ -15,10 +15,10 @@ class Gravitation2
             bottom: 5
         };
 
-        this.radius = 3;
+        this.radius = 5;
         this.mass = this.radius * this.radius * this.radius * this.radius2mass;
-        this.colorClose = { 'r': 0.5, 'g': 0.7, 'b': 1 }; // in linear scale [0,1]
-        this.colorFar = { 'r': 0.7, 'g': 0.5, 'b': 0.35 }; // in linear scale [0,1]
+        this.colorClose = { 'r': 0.35, 'g': 0.7, 'b': 1 }; // in linear scale [0,1]
+        this.colorFar = { 'r': 0.7, 'g': 0.35, 'b': 0.25 }; // in linear scale [0,1]
 
         this.simTick = 5; // ms
         this.innerScale = 1 / 3;
@@ -175,7 +175,7 @@ class Gravitation2
             g *= g * 255;
             var b = colorFar.b * zDistance + colorClose.b * closeness;
             b *= b * 255;
-            return d3.rgb(r, g, b);
+            return d3.rgb(r, g, b, 1);
         }
 
         var lastElapsed = 0;
@@ -208,7 +208,13 @@ class Gravitation2
                 var y = (pos.y - yCenter) * depthScale + yCenter;
                 var r = d.radius * depthScale;
 
-                context.fillStyle = scaleDepthFill(d);
+                var fill = scaleDepthFill(d);
+                var grad = context.createRadialGradient(x, y, 0, x, y, r);
+                grad.addColorStop(0, fill);
+                fill.opacity = 0;
+                grad.addColorStop(1, fill);
+
+                context.fillStyle = grad;
                 context.beginPath();
                 context.arc(x, y, r, 0, PI2);
                 context.closePath();
@@ -246,7 +252,7 @@ class Gravitation2
 // Instantiation
 window.onload = function()
 {
-    var instance = new Gravitation2(
+    var instance = new Gravitation2_1(
         document.documentElement.clientWidth - 4,
         document.documentElement.clientHeight - 4);
 

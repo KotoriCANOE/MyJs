@@ -14,7 +14,7 @@ class Gravitation1
             right: 5,
             bottom: 5
         };
-        
+
         this.radRange = [0.5,5];
         this.simTick = 5; // ms
 
