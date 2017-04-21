@@ -230,7 +230,7 @@ class Gravitation2_1
 
             context.font = '15px Consolas';
             context.fillStyle = 'white';
-            context.fillText('FPS: ' + fps, 10, 10);
+            context.fillText('FPS: ' + fps, 10, 20);
         });
     }
 

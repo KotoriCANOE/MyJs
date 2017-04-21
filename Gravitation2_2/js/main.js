@@ -193,7 +193,8 @@ class Gravitation2
             // Canvas drawing
             var context = that.context;
 
-            context.clearRect(-that.margin.left, -that.margin.top,
+            context.fillStyle = 'rgba(0,0,0,0.2)'
+            context.fillRect(-that.margin.left, -that.margin.top,
                 that.canvas.attr('width'), that.canvas.attr('height'));
 
             var PI2 = Math.PI * 2;
@@ -222,6 +223,7 @@ class Gravitation2
             durationIndex = ++durationIndex % 50;
             var fps = 50000 / duration50.reduce(function(a, b){ return a + b; }, 0);
 
+            context.clearRect(10, 5, 200, 15);
             context.font = '15px Consolas';
             context.fillStyle = 'white';
             context.fillText('FPS: ' + fps, 10, 20);
