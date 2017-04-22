@@ -65,7 +65,7 @@ class Gravitation1
         return {
             'radius': radius,
             'mass': radius * radius * radius * that.radius2mass,
-            'fill': d3.hsl(randomRange(0, 360), 2 / 3, .5),
+            'fill': d3.hsl(randomRange(0, 360), 2 / 3, 0.5),
             'x': that.width / 2,
             'y': that.height / 2,
             'vx': speed * Math.cos(angleXY),

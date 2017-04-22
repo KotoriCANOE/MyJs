@@ -60,12 +60,6 @@ class Gravitation3 extends Gravitation2
                     vel.x = -vel.x;
                 }
 
-                /*if(pos.y > height)
-                { // reflect if hitting the ground
-                    pos.y = height + height - pos.y;
-                    vel.y = yAcc - vel.y;
-                }*/
-
                 if(pos.z < 0)
                 { // reflect if hitting outer wall
                     pos.z = -pos.z;
@@ -141,7 +135,7 @@ class Gravitation3 extends Gravitation2
                 var depthScale = that.depthScale(pos.z);
                 var x = (pos.x - xCenter) * depthScale + xCenter;
                 var y = (pos.y - yCenter) * depthScale + yCenter;
-                var r = d.radius * depthScale;
+                var r = Math.max(0, d.radius * depthScale);
 
                 context.fillStyle = scaleDepthFill(d);
                 context.beginPath();

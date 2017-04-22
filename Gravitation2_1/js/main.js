@@ -1,6 +1,7 @@
 class Gravitation2_1 extends Gravitation2
 {
-    constructor(width, height, depth = null, maxNodesNum = 1024, scale = 4, speed = null)
+    constructor(width, height, depth = null,
+        maxNodesNum = 1024, scale = 4, speed = null)
     {
         super(width, height, depth, maxNodesNum, scale, speed);
 
@@ -56,7 +57,7 @@ class Gravitation2_1 extends Gravitation2
                 var depthScale = that.depthScale(pos.z);
                 var x = (pos.x - xCenter) * depthScale + xCenter;
                 var y = (pos.y - yCenter) * depthScale + yCenter;
-                var r = d.radius * depthScale;
+                var r = Math.max(0, d.radius * depthScale);
 
                 var fill = scaleDepthFill(d);
                 var grad = context.createRadialGradient(x, y, 0, x, y, r);

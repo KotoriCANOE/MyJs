@@ -64,19 +64,27 @@ class Gravitation2
 
         this.depthScale = d3.scaleLinear()
             .domain([0, this.depth])
-            .range([1, this.innerScale]);
+            .range([1, this.innerScale])
+            .clamp(false);
 
         this.random = new Random();
     }
 
     // Helper functions
-    createRandomNode(that = null, position = null)
+    createRandomNode(that = null, position = null,
+        speed = null, speedSTD = null, color = null,
+         life = null, lifeSTD = null)
     {
         if(!that) that = this;
         if(!position) position = new Vector3(that.width * 0.5, that.height * 0.5, that.depth * 0.5);
+        else position = position.copy();
+        if(!speed) speed = that.speed;
+        if(!speedSTD) speedSTD = speed * 0.5;
+        if(!life) life = that.life;
+        if(!lifeSTD) lifeSTD = life * 0.5;
         var random = that.random;
 
-        var speed = random.normal(that.speed, that.speed * 0.5);
+        var speed = random.normal(speed, speedSTD);
         var longitude = random.uniform(0, Math.PI * 2);
         var latitude = random.uniform(Math.PI * -0.5, Math.PI * 0.5);
         var speedXZ = speed * Math.cos(latitude);
@@ -87,17 +95,20 @@ class Gravitation2
                 speed * Math.sin(latitude), speedXZ * Math.sin(longitude)),
             that.gravity,
             that.radius,
-            null,
-            that.life ? random.normal(that.life, that.life * 0.5) : Infinity
+            color ? color.toString() : color,
+            life ? random.normal(life, lifeSTD) : Infinity
         );
     }
 
-    appendRandomNodes(nodes, number, that = null, position = null)
+    appendRandomNodes(nodes, number, that = null, position = null,
+        speed = null, speedSTD = null, color = null,
+        life = null, lifeSTD = null)
     {
         if(!that) that = this;
         for(var i = 0; i < number; ++i)
         {
-            nodes.push(that.createRandomNode(that, position));
+            nodes.push(that.createRandomNode(that, position,
+                speed, speedSTD, color, life, lifeSTD));
         }
     }
 
@@ -207,7 +218,7 @@ class Gravitation2
                 var depthScale = that.depthScale(pos.z);
                 var x = (pos.x - xCenter) * depthScale + xCenter;
                 var y = (pos.y - yCenter) * depthScale + yCenter;
-                var r = d.radius * depthScale;
+                var r = Math.max(0, d.radius * depthScale);
 
                 context.fillStyle = scaleDepthFill(d);
                 context.beginPath();
