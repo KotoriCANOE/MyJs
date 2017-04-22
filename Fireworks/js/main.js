@@ -102,6 +102,10 @@ class Fireworks extends Gravitation2
     {
         var that = this;
 
+        this.context.fillStyle = 'rgb(2,2,2)'
+        this.context.fillRect(-that.margin.left, -that.margin.top,
+            that.canvas.attr('width'), that.canvas.attr('height'));
+
         var lastElapsed = 0;
         var duration50 = new Array(50);
         var durationIndex = 0;

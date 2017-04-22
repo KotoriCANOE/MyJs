@@ -90,6 +90,10 @@ class Gravitation3 extends Gravitation2
     {
         var that = this;
 
+        this.context.fillStyle = 'rgb(2,2,2)'
+        this.context.fillRect(-that.margin.left, -that.margin.top,
+            that.canvas.attr('width'), that.canvas.attr('height'));
+
         function scaleDepthFill(d)
         {
             var colorClose = that.colorClose;
