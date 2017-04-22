@@ -8,6 +8,14 @@ function randomRangeInt(lower, upper)
     return Math.floor(Math.random() * (upper - lower + 1) + lower);
 }
 
+// fast remove an element from array
+// break the original order
+function arrayRemove(array, index)
+{
+    var last = array.pop();
+    if(index < array.length) array[index] = last;
+}
+
 var ColorTable =
 {
     t1: ['rgb(255,255,255)',
