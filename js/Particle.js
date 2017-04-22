@@ -19,11 +19,11 @@ class Particle3D
         var acceleration0 = this.acceleration;
         if(accel != null)
         { // update acceleration
-            acceleration0.addSelf(accel).mulSelf(0.5); // better approximation
-            this.acceleration = accel;
+            acceleration0 = acceleration0.add(accel).mulSelf(0.5); // better approximation
+            this.acceleration = accel.copy();
         }
 
-        var velocity0 = this.velocity;
+        var velocity0 = this.velocity.copy();
         this.velocity.addSelf(acceleration0);
         velocity0.addSelf(this.velocity).mulSelf(0.5); // better approximation
 

@@ -1,11 +1,12 @@
 class Fireworks extends Gravitation2
 {
     constructor(width, height, depth = null,
-        maxNodesNum = 40, scale = 4, speed = null, life = 200)
+        maxNodesNum = 16, scale = 4, speed = null, life = 400)
     {
         super(width, height, depth, maxNodesNum, scale, speed, life);
 
         this.radius = 2;
+        this.resistance = -0.003;
     }
 
     // Main methods
@@ -25,6 +26,8 @@ class Fireworks extends Gravitation2
             var width = that.width;
             var height = that.height;
             var depth = that.depth;
+            var gravity = that.gravity;
+            var resistance = that.resistance;
 
             // aging
             for(var i = 0; i < nodes.length;)
@@ -47,8 +50,12 @@ class Fireworks extends Gravitation2
                 var vel = node.velocity;
                 var yAcc = node.acceleration.y;
 
+                // air resistance
+                var accel = node.velocity.mul(node.velocity.length() * resistance);
+                accel.addSelf(gravity);
+
                 // update
-                node.kinetic();
+                node.kinetic(accel);
 
                 // boundary reflection
                 if(pos.y > height)
@@ -63,8 +70,8 @@ class Fireworks extends Gravitation2
             
             for(spawnUpper += spawnStep; spawnCount < spawnUpper; ++spawnCount)
             {
-                var size = random.exponential(0.5) * 0.2 + 0.1;
-                var number = random.normal(size * 128, size * 32);
+                var size = random.exponential(0.5) * 0.2 + 0.2;
+                var number = random.normal(size * 256, size * 32);
                 var xzSTD = Math.max(0.05, 0.3 - size * 0.2);
                 var ySTD = Math.min(0.125, size * 0.1);
 
@@ -75,7 +82,7 @@ class Fireworks extends Gravitation2
                 );
 
                 var speed = that.speed * size;
-                var speedSTD = speed * 0.1;
+                var speedSTD = speed * 0.05;
                 var color = d3.hsl(random.uniform(0, 360), 2 / 3, 0.5, 1);
                 var life = that.life * Math.sqrt(size);
                 var lifeSTD = life * 0.15;
