@@ -56,7 +56,7 @@ class Gravitation1
     }
 
     // Helper methods
-    createRandomNode(i, that=null)
+    createRandomNode(that = null)
     {
         if(!that) that = this;
         var radius = randomRange(that.radRange[0], that.radRange[1]);
@@ -79,7 +79,7 @@ class Gravitation1
         var d = new Array(nodesNum);
         for(var i = 0; i < nodesNum; ++i)
         {
-            d[i] = this.createRandomNode(i);
+            d[i] = this.createRandomNode();
         }
         return d;
     }

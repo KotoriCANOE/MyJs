@@ -1,6 +1,7 @@
 class Gravitation2
 {
-    constructor(width, height, depth = null, maxNodesNum = 2048, scale = 4, maxSpeed = null, minSpeed = null)
+    constructor(width, height, depth = null,
+        maxNodesNum = 2048, scale = 4, speed = null, life = null)
     {
         // physics constants
         this.g = 9.81;
@@ -35,21 +36,17 @@ class Gravitation2
         var yAcc = this.g * this.simTickSec * this.simTickSec;
         this.gravity = new Vector3(0, yAcc, 0);
 
-        if(!maxSpeed)
+        if(!speed)
         {
-            var yMaxSpeed = Math.sqrt(2 * yAcc * this.height);
-            var yMaxTime = this.height * 2 / yMaxSpeed;
-            var xMaxSpeed = this.width / (2 * yMaxTime);
-            var zMaxSpeed = this.depth / (2 * yMaxTime);
-            this.maxSpeed = Math.sqrt(xMaxSpeed * xMaxSpeed + yMaxSpeed * yMaxSpeed + zMaxSpeed * zMaxSpeed);
+            var ySpeed = Math.sqrt(yAcc * this.height);
+            this.speed = ySpeed;
         }
         else
         {
-            this.maxSpeed = maxSpeed * this.simTickSec;
+            this.speed = speed * this.simTickSec;
         }
 
-        if(!minSpeed) this.minSpeed = 1 * this.simTickSec;
-        else this.minSpeed = minSpeed;
+        this.life = life;
 
         // initialization
         this.canvas = d3.select("#vis")
@@ -68,40 +65,48 @@ class Gravitation2
         this.depthScale = d3.scaleLinear()
             .domain([0, this.depth])
             .range([1, this.innerScale]);
+
+        this.random = new Random();
     }
 
-    // Helper methods
-    createRandomNode(i, that=null)
+    // Helper functions
+    createRandomNode(that = null, position = null)
     {
         if(!that) that = this;
-        var speed = randomRange(that.minSpeed, that.maxSpeed);
-        var longitude = randomRange(0, Math.PI * 2);
-        var latitude = randomRange(Math.PI * -0.5, Math.PI * 0.5);
+        if(!position) position = new Vector3(that.width * 0.5, that.height * 0.5, that.depth * 0.5);
+        var random = that.random;
+
+        var speed = random.normal(that.speed, that.speed * 0.5);
+        var longitude = random.uniform(0, Math.PI * 2);
+        var latitude = random.uniform(Math.PI * -0.5, Math.PI * 0.5);
         var speedXZ = speed * Math.cos(latitude);
 
         return new Particle3D(
-            new Vector3(that.width / 2, that.height / 2, that.depth / 2),
+            position,
             new Vector3(speedXZ * Math.cos(longitude),
                 speed * Math.sin(latitude), speedXZ * Math.sin(longitude)),
             that.gravity,
             that.radius,
             null,
-            Infinity
-        )
+            that.life ? random.normal(that.life, that.life * 0.5) : Infinity
+        );
     }
 
-    createRandomNodes()
+    appendRandomNodes(nodes, number, that = null, position = null)
     {
-        var nodesNum = this.maxNodesNum;
-        var d = new Array(nodesNum);
-        for(var i = 0; i < nodesNum; ++i)
+        if(!that) that = this;
+        for(var i = 0; i < number; ++i)
         {
-            d[i] = this.createRandomNode(i);
+            nodes.push(that.createRandomNode(that, position));
         }
-        return d;
     }
 
     // Main methods
+    initialize(nodes)
+    {
+        this.appendRandomNodes(nodes, this.maxNodesNum);
+    }
+
     simulate(nodes)
     {
         var that = this;
@@ -109,17 +114,13 @@ class Gravitation2
         // run continuously by ticks
         d3.interval(function()
         {
-            var nodesNum = nodes.length;
             var width = that.width;
             var height = that.height;
             var depth = that.depth;
-            var gravity = that.gravity;
-            var innerScale = that.innerScale;
 
             // kinetic simulation
-            for(var i = 0; i < nodesNum; ++i)
+            nodes.forEach(function(node)
             {
-                var node = nodes[i];
                 var pos = node.position;
                 var vel = node.velocity;
                 var yAcc = node.acceleration.y;
@@ -155,7 +156,7 @@ class Gravitation2
                     pos.z = depth + depth - pos.z;
                     vel.z = -vel.z;
                 }
-            }
+            });
         }, this.simTick);
     }
 
@@ -197,8 +198,8 @@ class Gravitation2
                 that.canvas.attr('width'), that.canvas.attr('height'));
 
             var PI2 = Math.PI * 2;
-            var xCenter = that.width / 2;
-            var yCenter = that.height / 2;
+            var xCenter = that.width * 0.5;
+            var yCenter = that.height * 0.5;
 
             nodes.forEach(function(d)
             {
@@ -228,17 +229,13 @@ class Gravitation2
         });
     }
 
-    randomSimulate()
-    {
-        var that = this;
-        var nodes = this.createRandomNodes();
-        this.simulate(nodes);
-        this.draw(nodes);
-    }
-
     Run()
     {
-        this.randomSimulate();
+        var that = this;
+        var nodes = new Array();
+        this.initialize(nodes);
+        this.simulate(nodes);
+        this.draw(nodes);
     }
 }
 
