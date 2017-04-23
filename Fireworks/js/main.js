@@ -1,12 +1,12 @@
 class Fireworks extends Gravitation2
 {
     constructor(width, height, depth = null,
-        maxNodesNum = 16, scale = 4, speed = null, life = 400)
+        maxNodesNum = 8, scale = 4, speed = null, life = 400)
     {
         super(width, height, depth, maxNodesNum, scale, speed, life);
 
+        this.resistance = -0.01;
         this.radius = 2;
-        this.resistance = -0.003;
     }
 
     // Main methods
@@ -21,7 +21,7 @@ class Fireworks extends Gravitation2
         var spawnUpper = 0;
 
         // run continuously by ticks
-        d3.interval(function()
+        d3.interval(function(elapsed)
         {
             var width = that.width;
             var height = that.height;
@@ -51,7 +51,8 @@ class Fireworks extends Gravitation2
                 var yAcc = node.acceleration.y;
 
                 // air resistance
-                var accel = node.velocity.mul(node.velocity.length() * resistance);
+                var accelMul = Math.max(-0.33, node.velocity.length() * resistance);
+                var accel = node.velocity.mul(accelMul);
                 accel.addSelf(gravity);
 
                 // update
@@ -70,10 +71,10 @@ class Fireworks extends Gravitation2
             
             for(spawnUpper += spawnStep; spawnCount < spawnUpper; ++spawnCount)
             {
-                var size = random.exponential(0.5) * 0.2 + 0.2;
-                var number = random.normal(size * 256, size * 32);
+                var size = random.exponential(0.4) * 0.2 + 0.2;
+                var number = random.normal(size * 512, size * 64);
                 var xzSTD = Math.max(0.05, 0.3 - size * 0.2);
-                var ySTD = Math.min(0.125, size * 0.1);
+                var ySTD = Math.min(0.05, size * 0.05);
 
                 var position = new Vector3(
                     random.normal(width * 0.5, width * xzSTD),
@@ -81,8 +82,8 @@ class Fireworks extends Gravitation2
                     random.normal(depth * 0.5, depth * xzSTD)
                 );
 
-                var speed = that.speed * size;
-                var speedSTD = speed * 0.05;
+                var speed = that.speed * 10 * size * size * size;
+                var speedSTD = speed * 0.1;
                 var color = d3.hsl(random.uniform(0, 360), 2 / 3, 0.5, 1);
                 var life = that.life * Math.sqrt(size);
                 var lifeSTD = life * 0.15;
