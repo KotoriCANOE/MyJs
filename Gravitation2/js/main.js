@@ -190,9 +190,7 @@ class Gravitation2
             return d3.rgb(r, g, b);
         }
 
-        var lastElapsed = 0;
-        var duration50 = new Array(50);
-        var durationIndex = 0;
+        var fpsCounter = new RateCounter(50, 1000);
 
         d3.timer(function(elapsed)
         {
@@ -228,15 +226,8 @@ class Gravitation2
             });
 
             // draw FPS
-            var duration = elapsed - lastElapsed;
-            lastElapsed = elapsed;
-            duration50[durationIndex] = duration;
-            durationIndex = ++durationIndex % 50;
-            var fps = 50000 / duration50.reduce(function(a, b){ return a + b; }, 0);
-
-            context.font = '15px Consolas';
-            context.fillStyle = 'white';
-            context.fillText('FPS: ' + fps, 10, 20);
+            fpsCounter.elapsed(elapsed);
+            fpsCounter.drawCanvas(context, true, 10, 20, 15, 'FPS: ');
         });
     }
 

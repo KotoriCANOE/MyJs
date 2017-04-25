@@ -20,6 +20,8 @@ class Fireworks extends Gravitation2
         var spawnCount = 0;
         var spawnUpper = 0;
 
+        var fpsCounter = new RateCounter(50, 1000);
+
         // run continuously by ticks
         d3.interval(function(elapsed)
         {
@@ -51,7 +53,7 @@ class Fireworks extends Gravitation2
                 var yAcc = node.acceleration.y;
 
                 // air resistance
-                var accelMul = Math.max(-0.33, node.velocity.length() * resistance);
+                var accelMul = Math.max(-0.5, node.velocity.length() * resistance);
                 var accel = node.velocity.mul(accelMul);
                 accel.addSelf(gravity);
 
@@ -82,7 +84,7 @@ class Fireworks extends Gravitation2
                     random.normal(depth * 0.5, depth * xzSTD)
                 );
 
-                var speed = that.speed * 10 * size * size * size;
+                var speed = that.speed * 5 * size * size * size;
                 var speedSTD = speed * 0.1;
                 var color = d3.hsl(random.uniform(0, 360), 2 / 3, 0.5, 1);
                 var life = that.life * Math.sqrt(size);
@@ -96,6 +98,9 @@ class Fireworks extends Gravitation2
                 spawnCount -= that.maxNodesNum;
                 spawnUpper -= that.maxNodesNum;
             }
+
+            fpsCounter.elapsed(elapsed);
+            fpsCounter.drawCanvas(that.context, true, 10, 40, 15, 'Sim TPS: ');
         }, this.simTick);
     }
 
@@ -107,9 +112,7 @@ class Fireworks extends Gravitation2
         this.context.fillRect(-that.margin.left, -that.margin.top,
             that.canvas.attr('width'), that.canvas.attr('height'));
 
-        var lastElapsed = 0;
-        var duration50 = new Array(50);
-        var durationIndex = 0;
+        var fpsCounter = new RateCounter(50, 1000);
 
         d3.timer(function(elapsed)
         {
@@ -147,16 +150,8 @@ class Fireworks extends Gravitation2
             });
 
             // draw FPS
-            var duration = elapsed - lastElapsed;
-            lastElapsed = elapsed;
-            duration50[durationIndex] = duration;
-            durationIndex = ++durationIndex % 50;
-            var fps = 50000 / duration50.reduce(function(a, b){ return a + b; }, 0);
-
-            context.clearRect(10, 5, 200, 15);
-            context.font = '15px Consolas';
-            context.fillStyle = 'white';
-            context.fillText('FPS: ' + fps, 10, 20);
+            fpsCounter.elapsed(elapsed);
+            fpsCounter.drawCanvas(context, true, 10, 20, 15, 'FPS: ');
         });
     }
 }
