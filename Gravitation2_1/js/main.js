@@ -10,9 +10,10 @@ class Gravitation2_1 extends Gravitation2
     }
 
     // Main methods
-    draw(nodes)
+    draw(data)
     {
         var that = this;
+        var fpsCounter = new RateCounter(50, 1000);
 
         function scaleDepthFill(d)
         {
@@ -29,12 +30,10 @@ class Gravitation2_1 extends Gravitation2
             return d3.rgb(r, g, b, 1);
         }
 
-        var fpsCounter = new RateCounter(50, 1000);
-
         d3.timer(function(elapsed)
         {
             // sort nodes by descending z-depth
-            nodes.sort(function(a, b)
+            data.nodes.sort(function(a, b)
             {
                 return b.position.z - a.position.z;
             });
@@ -49,7 +48,7 @@ class Gravitation2_1 extends Gravitation2
             var xCenter = that.width / 2;
             var yCenter = that.height / 2;
 
-            nodes.forEach(function(d)
+            data.nodes.forEach(function(d)
             {
                 var pos = d.position;
                 var depthScale = that.depthScale(pos.z);
@@ -75,15 +74,4 @@ class Gravitation2_1 extends Gravitation2
             fpsCounter.drawCanvas(context, true, 10, 20, 15, 'FPS: ');
         });
     }
-}
-
-
-// Instantiation
-window.onload = function()
-{
-    var instance = new Gravitation2_1(
-        document.documentElement.clientWidth - 4,
-        document.documentElement.clientHeight - 4);
-
-    instance.Run();
 }

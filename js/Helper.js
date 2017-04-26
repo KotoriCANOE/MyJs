@@ -60,10 +60,16 @@ class RateCounter
     drawCanvas(context, clear = false, x = 10, y = 20,
         size = 15, prefix = 'Rate: ', fill = 'white')
     {
-        var text = prefix + this.rate();
-        if(clear) context.clearRect(x, y - size, text.length * size, size);
-        context.font = size + 'px Consolas';
-        context.fillStyle = fill;
-        context.fillText(text, x, y);
+        drawRate(this.rate(), context, clear, x, y, size, prefix, fill);
     }
+}
+
+function drawRate(rate, context, clear = false, x = 10, y = 20,
+    size = 15, prefix = 'Rate: ', fill = 'white')
+{
+    var text = prefix + rate;
+    if(clear) context.clearRect(x, y - size, text.length * size, size);
+    context.font = size + 'px Consolas';
+    context.fillStyle = fill;
+    context.fillText(text, x, y);
 }

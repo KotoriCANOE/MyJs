@@ -30,3 +30,21 @@ class Particle3D
         this.position.addSelf(velocity0);
     }
 }
+
+
+function arrayAging(nodes)
+{
+    var i = nodes.length - 1;
+    for(; i >= 0 && nodes[i].aging(); --i)
+    { // the last ones
+        nodes.pop();
+    }
+    for(; i >= 0; --i)
+    { // the middle ones
+        if(nodes[i].aging())
+        {
+            var last = nodes.pop();
+            nodes[i] = last;
+        }
+    }
+}

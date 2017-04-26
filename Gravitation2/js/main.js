@@ -59,9 +59,6 @@ class Gravitation2
         this.width -= this.margin.left + this.margin.right;
         this.height -= this.margin.top + this.margin.bottom;
 
-        var detachedContainer = document.createElement('custom');
-        this.dataContainer = d3.select(detachedContainer);
-
         this.depthScale = d3.scaleLinear()
             .domain([0, this.depth])
             .range([1, this.innerScale])
@@ -71,11 +68,10 @@ class Gravitation2
     }
 
     // Helper functions
-    createRandomNode(that = null, position = null,
+    static createRandomNode(that, accel = null, position = null,
         speed = null, speedSTD = null, color = null,
          life = null, lifeSTD = null)
     {
-        if(!that) that = this;
         if(!position) position = new Vector3(that.width * 0.5, that.height * 0.5, that.depth * 0.5);
         else position = position.copy();
         if(!speed) speed = that.speed;
@@ -93,32 +89,32 @@ class Gravitation2
             position,
             new Vector3(speedXZ * Math.cos(longitude),
                 speed * Math.sin(latitude), speedXZ * Math.sin(longitude)),
-            that.gravity,
+            accel,
             that.radius,
             color ? color.toString() : color,
             life ? random.normal(life, lifeSTD) : Infinity
         );
     }
 
-    appendRandomNodes(nodes, number, that = null, position = null,
-        speed = null, speedSTD = null, color = null,
+    static appendRandomNodes(that, nodes, number, accel = null,
+        position = null, speed = null, speedSTD = null, color = null,
         life = null, lifeSTD = null)
     {
-        if(!that) that = this;
         for(var i = 0; i < number; ++i)
         {
-            nodes.push(that.createRandomNode(that, position,
+            nodes.push(Gravitation2.createRandomNode(that, accel, position,
                 speed, speedSTD, color, life, lifeSTD));
         }
     }
 
     // Main methods
-    initialize(nodes)
+    initialize(data)
     {
-        this.appendRandomNodes(nodes, this.maxNodesNum);
+        data.nodes = new Array();
+        Gravitation2.appendRandomNodes(this, data.nodes, this.maxNodesNum, this.gravity);
     }
 
-    simulate(nodes)
+    simulate(data)
     {
         var that = this;
 
@@ -130,7 +126,7 @@ class Gravitation2
             var depth = that.depth;
 
             // kinetic simulation
-            nodes.forEach(function(node)
+            data.nodes.forEach(function(node)
             {
                 var pos = node.position;
                 var vel = node.velocity;
@@ -171,7 +167,7 @@ class Gravitation2
         }, this.simTick);
     }
 
-    draw(nodes)
+    draw(data)
     {
         var that = this;
 
@@ -195,7 +191,7 @@ class Gravitation2
         d3.timer(function(elapsed)
         {
             // sort nodes by descending z-depth
-            nodes.sort(function(a, b)
+            data.nodes.sort(function(a, b)
             {
                 return b.position.z - a.position.z;
             });
@@ -210,7 +206,7 @@ class Gravitation2
             var xCenter = that.width * 0.5;
             var yCenter = that.height * 0.5;
 
-            nodes.forEach(function(d)
+            data.nodes.forEach(function(d)
             {
                 var pos = d.position;
                 var depthScale = that.depthScale(pos.z);
@@ -233,21 +229,9 @@ class Gravitation2
 
     Run()
     {
-        var that = this;
-        var nodes = new Array();
-        this.initialize(nodes);
-        this.simulate(nodes);
-        this.draw(nodes);
+        var data = new Object();
+        this.initialize(data);
+        this.simulate(data);
+        this.draw(data);
     }
-}
-
-
-// Instantiation
-window.onload = function()
-{
-    var instance = new Gravitation2(
-        document.documentElement.clientWidth - 4,
-        document.documentElement.clientHeight - 4);
-
-    instance.Run();
 }

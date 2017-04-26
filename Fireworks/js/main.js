@@ -10,21 +10,26 @@ class Fireworks extends Gravitation2
     }
 
     // Main methods
-    initialize(nodes)
-    {}
+    initialize(data)
+    {
+        data.nodes = new Array();
+        data.rate = 0;
+    }
 
-    simulate(nodes)
+    simulate(data)
     {
         var that = this;
+        var rateCounter = new RateCounter(50, 1000);
+
         var spawnStep = that.maxNodesNum / that.life;
         var spawnCount = 0;
         var spawnUpper = 0;
 
-        var fpsCounter = new RateCounter(50, 1000);
-
         // run continuously by ticks
         d3.interval(function(elapsed)
         {
+            var nodes = data.nodes;
+            var random = that.random;
             var width = that.width;
             var height = that.height;
             var depth = that.depth;
@@ -32,18 +37,7 @@ class Fireworks extends Gravitation2
             var resistance = that.resistance;
 
             // aging
-            for(var i = 0; i < nodes.length;)
-            {
-                if(nodes[i].aging())
-                {
-                    arrayRemove(nodes, i);
-                    //console.log('Remove: ' + i);
-                }
-                else
-                {
-                    ++i;
-                }
-            }
+            arrayAging(nodes);
 
             // kinetic simulation
             nodes.forEach(function(node)
@@ -69,8 +63,6 @@ class Fireworks extends Gravitation2
             });
 
             // spawn
-            var random = that.random;
-            
             for(spawnUpper += spawnStep; spawnCount < spawnUpper; ++spawnCount)
             {
                 var size = random.exponential(0.4) * 0.2 + 0.2;
@@ -90,7 +82,7 @@ class Fireworks extends Gravitation2
                 var life = that.life * Math.sqrt(size);
                 var lifeSTD = life * 0.15;
 
-                that.appendRandomNodes(nodes, number, that, position,
+                Gravitation2.appendRandomNodes(that, nodes, number, gravity, position,
                     speed, speedSTD, color, life, lifeSTD);
             }
             if(spawnCount >= that.maxNodesNum)
@@ -99,25 +91,25 @@ class Fireworks extends Gravitation2
                 spawnUpper -= that.maxNodesNum;
             }
 
-            fpsCounter.elapsed(elapsed);
-            fpsCounter.drawCanvas(that.context, true, 10, 40, 15, 'Sim TPS: ');
-        }, this.simTick);
+            rateCounter.elapsed(elapsed);
+            data.rate = rateCounter.rate();
+            //data.nodes = nodes.slice(); // make a clone
+        }, that.simTick);
     }
 
-    draw(nodes)
+    draw(data)
     {
         var that = this;
+        var fpsCounter = new RateCounter(50, 1000);
 
         this.context.fillStyle = 'rgb(2,2,2)'
         this.context.fillRect(-that.margin.left, -that.margin.top,
             that.canvas.attr('width'), that.canvas.attr('height'));
 
-        var fpsCounter = new RateCounter(50, 1000);
-
         d3.timer(function(elapsed)
         {
             // sort nodes by descending z-depth
-            nodes.sort(function(a, b)
+            data.nodes.sort(function(a, b)
             {
                 return b.position.z - a.position.z;
             });
@@ -133,14 +125,13 @@ class Fireworks extends Gravitation2
             var xCenter = that.width * 0.5;
             var yCenter = that.height * 0.5;
 
-            nodes.forEach(function(d)
+            data.nodes.forEach(function(d)
             {
                 var pos = d.position;
                 var depthScale = that.depthScale(pos.z);
                 var x = (pos.x - xCenter) * depthScale + xCenter;
                 var y = (pos.y - yCenter) * depthScale + yCenter;
                 var r = Math.max(0, d.radius * depthScale);
-                //d.color.opacity = 1 - d.age / d.life;
 
                 context.fillStyle = d.color;
                 context.beginPath();
@@ -152,17 +143,7 @@ class Fireworks extends Gravitation2
             // draw FPS
             fpsCounter.elapsed(elapsed);
             fpsCounter.drawCanvas(context, true, 10, 20, 15, 'FPS: ');
+            drawRate(data.rate, context, true, 10, 40, 15, 'Sim TPS: ');
         });
     }
-}
-
-
-// Instantiation
-window.onload = function()
-{
-    var instance = new Fireworks(
-        document.documentElement.clientWidth - 4,
-        document.documentElement.clientHeight - 4);
-
-    instance.Run();
 }

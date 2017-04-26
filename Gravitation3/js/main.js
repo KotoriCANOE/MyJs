@@ -7,10 +7,12 @@ class Gravitation3 extends Gravitation2
     }
 
     // Main methods
-    initialize(nodes)
-    {}
+    initialize(data)
+    {
+        data.nodes = new Array();
+    }
 
-    simulate(nodes)
+    simulate(data)
     {
         var that = this;
         var spawnStep = that.maxNodesNum / that.life;
@@ -20,23 +22,13 @@ class Gravitation3 extends Gravitation2
         // run continuously by ticks
         d3.interval(function()
         {
+            var nodes = data.nodes;
             var width = that.width;
             var height = that.height;
             var depth = that.depth;
 
             // aging
-            for(var i = 0; i < nodes.length;)
-            {
-                if(nodes[i].aging())
-                {
-                    arrayRemove(nodes, i);
-                    //console.log('Remove: ' + i);
-                }
-                else
-                {
-                    ++i;
-                }
-            }
+            arrayAging(nodes);
 
             // kinetic simulation
             nodes.forEach(function(node)
@@ -75,20 +67,20 @@ class Gravitation3 extends Gravitation2
             // spawn
             for(spawnUpper += spawnStep; spawnCount < spawnUpper; ++spawnCount)
             {
-                nodes.push(that.createRandomNode(that));
+                nodes.push(Gravitation2.createRandomNode(that, that.gravity));
             }
             if(spawnCount >= that.maxNodesNum)
             {
                 spawnCount -= that.maxNodesNum;
                 spawnUpper -= that.maxNodesNum;
             }
-            //console.log('Spawn: ' + (nodes.length - 1));
         }, this.simTick);
     }
 
-    draw(nodes)
+    draw(data)
     {
         var that = this;
+        var fpsCounter = new RateCounter(50, 1000);
 
         this.context.fillStyle = 'rgb(2,2,2)'
         this.context.fillRect(-that.margin.left, -that.margin.top,
@@ -110,14 +102,10 @@ class Gravitation3 extends Gravitation2
             return d3.rgb(r, g, b, opacity);
         }
 
-        var lastElapsed = 0;
-        var duration50 = new Array(50);
-        var durationIndex = 0;
-
         d3.timer(function(elapsed)
         {
             // sort nodes by descending z-depth
-            nodes.sort(function(a, b)
+            data.nodes.sort(function(a, b)
             {
                 return b.position.z - a.position.z;
             });
@@ -133,7 +121,7 @@ class Gravitation3 extends Gravitation2
             var xCenter = that.width * 0.5;
             var yCenter = that.height * 0.5;
 
-            nodes.forEach(function(d)
+            data.nodes.forEach(function(d)
             {
                 var pos = d.position;
                 var depthScale = that.depthScale(pos.z);
@@ -149,27 +137,8 @@ class Gravitation3 extends Gravitation2
             });
 
             // draw FPS
-            var duration = elapsed - lastElapsed;
-            lastElapsed = elapsed;
-            duration50[durationIndex] = duration;
-            durationIndex = ++durationIndex % 50;
-            var fps = 50000 / duration50.reduce(function(a, b){ return a + b; }, 0);
-
-            context.clearRect(10, 5, 200, 15);
-            context.font = '15px Consolas';
-            context.fillStyle = 'white';
-            context.fillText('FPS: ' + fps, 10, 20);
+            fpsCounter.elapsed(elapsed);
+            fpsCounter.drawCanvas(context, true, 10, 20, 15, 'FPS: ');
         });
     }
-}
-
-
-// Instantiation
-window.onload = function()
-{
-    var instance = new Gravitation3(
-        document.documentElement.clientWidth - 4,
-        document.documentElement.clientHeight - 4);
-
-    instance.Run();
 }
