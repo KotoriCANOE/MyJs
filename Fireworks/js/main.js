@@ -1,26 +1,26 @@
 class Fireworks extends Gravitation2
 {
     constructor(width, height, depth = null,
-        maxNodesNum = 8, scale = 4, speed = null, life = 400)
+        maxNodesNum = 6, scale = 4, speed = null, life = 400)
     {
         super(width, height, depth, maxNodesNum, scale, speed, life);
 
         this.resistance = -0.01;
         this.radius = 2;
+        this.numPerNode = 512;
     }
 
     // Main methods
     initialize(data)
     {
-        data.nodes = new Array();
+        data.nodes = new Array(this.maxNodesNum * this.numPerNode * 1.5);
+        data.lastIndex = -1;
         data.rate = 0;
     }
 
     simulate(data)
     {
         var that = this;
-        var rateCounter = new RateCounter(50, 1000);
-
         var spawnStep = that.maxNodesNum / that.life;
         var spawnCount = 0;
         var spawnUpper = 0;
@@ -28,26 +28,31 @@ class Fireworks extends Gravitation2
         // run continuously by ticks
         d3.interval(function(elapsed)
         {
-            var nodes = data.nodes;
             var random = that.random;
             var width = that.width;
             var height = that.height;
             var depth = that.depth;
             var gravity = that.gravity;
             var resistance = that.resistance;
+            var numPerNode = that.numPerNode;
+            var numPerNodeSTD = numPerNode / 8;
 
             // aging
-            arrayAging(nodes);
+            arrayAging(data);
 
             // kinetic simulation
-            nodes.forEach(function(node)
+            var nodes = data.nodes;
+            var length = data.lastIndex + 1;
+
+            for(var i = 0; i < length; ++i)
             {
+                var node = nodes[i];
                 var pos = node.position;
                 var vel = node.velocity;
                 var yAcc = node.acceleration.y;
 
                 // air resistance
-                var accelMul = Math.max(-0.5, node.velocity.length() * resistance);
+                var accelMul = Math.max(-0.3, node.velocity.length() * resistance);
                 var accel = node.velocity.mul(accelMul);
                 accel.addSelf(gravity);
 
@@ -60,14 +65,14 @@ class Fireworks extends Gravitation2
                     pos.y = height;
                     vel.y = 0;
                 }
-            });
+            }
 
             // spawn
             for(spawnUpper += spawnStep; spawnCount < spawnUpper; ++spawnCount)
             {
                 var size = random.exponential(0.4) * 0.2 + 0.2;
-                var number = random.normal(size * 512, size * 64);
-                var xzSTD = Math.max(0.05, 0.3 - size * 0.2);
+                var number = random.normal(size * numPerNode, size * numPerNodeSTD);
+                var xzSTD = Math.max(0.05, 0.4 - size * 0.1);
                 var ySTD = Math.min(0.05, size * 0.05);
 
                 var position = new Vector3(
@@ -76,24 +81,21 @@ class Fireworks extends Gravitation2
                     random.normal(depth * 0.5, depth * xzSTD)
                 );
 
-                var speed = that.speed * 5 * size * size * size;
+                var speed = that.speed * 3 * size * size * size;
                 var speedSTD = speed * 0.1;
                 var color = d3.hsl(random.uniform(0, 360), 2 / 3, 0.5, 1);
                 var life = that.life * Math.sqrt(size);
                 var lifeSTD = life * 0.15;
 
-                Gravitation2.appendRandomNodes(that, nodes, number, gravity, position,
-                    speed, speedSTD, color, life, lifeSTD);
+                Gravitation2.appendRandomNodes(that, data, number,
+                    gravity, position, speed, speedSTD, color, life, lifeSTD);
             }
+
             if(spawnCount >= that.maxNodesNum)
             {
                 spawnCount -= that.maxNodesNum;
                 spawnUpper -= that.maxNodesNum;
             }
-
-            rateCounter.elapsed(elapsed);
-            data.rate = rateCounter.rate();
-            //data.nodes = nodes.slice(); // make a clone
         }, that.simTick);
     }
 
@@ -108,8 +110,10 @@ class Fireworks extends Gravitation2
 
         d3.timer(function(elapsed)
         {
+            var nodes = data.nodes.slice(0, data.lastIndex + 1);
+
             // sort nodes by descending z-depth
-            data.nodes.sort(function(a, b)
+            nodes.sort(function(a, b)
             {
                 return b.position.z - a.position.z;
             });
@@ -125,7 +129,7 @@ class Fireworks extends Gravitation2
             var xCenter = that.width * 0.5;
             var yCenter = that.height * 0.5;
 
-            data.nodes.forEach(function(d)
+            nodes.forEach(function(d)
             {
                 var pos = d.position;
                 var depthScale = that.depthScale(pos.z);
@@ -143,7 +147,7 @@ class Fireworks extends Gravitation2
             // draw FPS
             fpsCounter.elapsed(elapsed);
             fpsCounter.drawCanvas(context, true, 10, 20, 15, 'FPS: ');
-            drawRate(data.rate, context, true, 10, 40, 15, 'Sim TPS: ');
+            //drawRate(data.rate, context, true, 10, 40, 15, 'Sim TPS: ');
         });
     }
 }

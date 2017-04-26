@@ -33,8 +33,10 @@ class Gravitation2_2 extends Gravitation2
 
         d3.timer(function(elapsed)
         {
+            var nodes = data.nodes.slice(0, data.lastIndex + 1);
+
             // sort nodes by descending z-depth
-            data.nodes.sort(function(a, b)
+            nodes.sort(function(a, b)
             {
                 return b.position.z - a.position.z;
             });
@@ -50,7 +52,7 @@ class Gravitation2_2 extends Gravitation2
             var xCenter = that.width / 2;
             var yCenter = that.height / 2;
 
-            data.nodes.forEach(function(d)
+            nodes.forEach(function(d)
             {
                 var pos = d.position;
                 var depthScale = that.depthScale(pos.z);

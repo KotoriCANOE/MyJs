@@ -8,10 +8,10 @@ class Particle3D
         this.radius = radius;
         this.color = color;
         this.life = life;
-        this.age = 0;
+        this.remain = this.life;
     }
 
-    aging(time = 1) { this.age += time; return this.age >= this.life; }
+    aging(time = 1) { this.remain -= time; return this.remain <= 0; }
     accel() { this.velocity.addSelf(this.acceleration); }
     move() { this.position.addSelf(this.velocity); }
     kinetic(accel = null)
@@ -32,19 +32,17 @@ class Particle3D
 }
 
 
-function arrayAging(nodes)
+function arrayAging(data, sorted = false)
 {
-    var i = nodes.length - 1;
-    for(; i >= 0 && nodes[i].aging(); --i)
+    var nodes = data.nodes;
+    var lastIndex = data.lastIndex;
+    while(lastIndex >= 0 && nodes[lastIndex].aging())
     { // the last ones
-        nodes.pop();
+        --lastIndex;
     }
-    for(; i >= 0; --i)
+    if(!sorted) for(var i = lastIndex; i >= 0; --i)
     { // the middle ones
-        if(nodes[i].aging())
-        {
-            var last = nodes.pop();
-            nodes[i] = last;
-        }
+         nodes[i].aging() && (nodes[i] = nodes[lastIndex--]);
     }
+    data.lastIndex = lastIndex;
 }

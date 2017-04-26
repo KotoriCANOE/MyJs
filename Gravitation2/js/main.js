@@ -72,6 +72,7 @@ class Gravitation2
         speed = null, speedSTD = null, color = null,
          life = null, lifeSTD = null)
     {
+        if(!accel) accel = accel.copy();
         if(!position) position = new Vector3(that.width * 0.5, that.height * 0.5, that.depth * 0.5);
         else position = position.copy();
         if(!speed) speed = that.speed;
@@ -96,22 +97,39 @@ class Gravitation2
         );
     }
 
-    static appendRandomNodes(that, nodes, number, accel = null,
+    static appendRandomNodes(that, data, number, accel = null,
         position = null, speed = null, speedSTD = null, color = null,
         life = null, lifeSTD = null)
     {
+        var nodes = data.nodes;
+        var lastIndex = data.lastIndex;
         for(var i = 0; i < number; ++i)
         {
-            nodes.push(Gravitation2.createRandomNode(that, accel, position,
-                speed, speedSTD, color, life, lifeSTD));
+            nodes[++lastIndex] = Gravitation2.createRandomNode(that,
+                accel, position, speed, speedSTD, color, life, lifeSTD);
         }
+        data.lastIndex = lastIndex;
+    }
+
+    static createRandomNodes(that, number, accel = null,
+        position = null, speed = null, speedSTD = null, color = null,
+        life = null, lifeSTD = null)
+    {
+        var nodes = new Array(number);
+        for(var i = 0; i < number; ++i)
+        {
+            nodes[i] = Gravitation2.createRandomNode(that,
+                accel, position, speed, speedSTD, color, life, lifeSTD);
+        }
+        return nodes;
     }
 
     // Main methods
     initialize(data)
     {
-        data.nodes = new Array();
-        Gravitation2.appendRandomNodes(this, data.nodes, this.maxNodesNum, this.gravity);
+        data.nodes = new Array(this.maxNodesNum * 2);
+        data.lastIndex = -1;
+        Gravitation2.appendRandomNodes(this, data, this.maxNodesNum, this.gravity);
     }
 
     simulate(data)
@@ -119,15 +137,19 @@ class Gravitation2
         var that = this;
 
         // run continuously by ticks
-        d3.interval(function()
+        d3.interval(function(elapsed)
         {
             var width = that.width;
             var height = that.height;
             var depth = that.depth;
 
             // kinetic simulation
-            data.nodes.forEach(function(node)
+            var nodes = data.nodes;
+            var length = data.lastIndex + 1;
+
+            for(var i = 0; i < length; ++i)
             {
+                var node = nodes[i];
                 var pos = node.position;
                 var vel = node.velocity;
                 var yAcc = node.acceleration.y;
@@ -163,13 +185,14 @@ class Gravitation2
                     pos.z = depth + depth - pos.z;
                     vel.z = -vel.z;
                 }
-            });
-        }, this.simTick);
+            }
+        }, that.simTick);
     }
 
     draw(data)
     {
         var that = this;
+        var fpsCounter = new RateCounter(50, 1000);
 
         function scaleDepthFill(d)
         {
@@ -186,12 +209,12 @@ class Gravitation2
             return d3.rgb(r, g, b);
         }
 
-        var fpsCounter = new RateCounter(50, 1000);
-
         d3.timer(function(elapsed)
         {
+            var nodes = data.nodes.slice(0, data.lastIndex + 1);
+
             // sort nodes by descending z-depth
-            data.nodes.sort(function(a, b)
+            nodes.sort(function(a, b)
             {
                 return b.position.z - a.position.z;
             });
@@ -206,7 +229,7 @@ class Gravitation2
             var xCenter = that.width * 0.5;
             var yCenter = that.height * 0.5;
 
-            data.nodes.forEach(function(d)
+            nodes.forEach(function(d)
             {
                 var pos = d.position;
                 var depthScale = that.depthScale(pos.z);
