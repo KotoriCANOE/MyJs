@@ -1,0 +1,5 @@
+# Windows batch
+*.bat
+
+# Dataset
+_data*
