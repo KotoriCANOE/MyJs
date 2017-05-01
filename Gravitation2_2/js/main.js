@@ -31,6 +31,7 @@ class Gravitation2_2 extends Gravitation2
             return d3.rgb(r, g, b);
         }
 
+        // draw animation up to the limitation of display refreshing
         d3.timer(function(elapsed)
         {
             var nodes = data.nodes.slice(0, data.lastIndex + 1);
@@ -41,13 +42,14 @@ class Gravitation2_2 extends Gravitation2
                 return b.position.z - a.position.z;
             });
 
-            // Canvas drawing
+            // Canvas refreshing
             var context = that.context;
 
             context.fillStyle = 'rgba(0,0,0,0.2)'
             context.fillRect(-that.margin.left, -that.margin.top,
                 that.canvas.attr('width'), that.canvas.attr('height'));
 
+            // Canvas drawing
             var PI2 = Math.PI * 2;
             var xCenter = that.width / 2;
             var yCenter = that.height / 2;
