@@ -34,3 +34,40 @@ body {
     box-orient: horizontal;
     box-pack: center;*/
 }
+
+#selector {
+    position: absolute;
+    top: 12%;
+    left: 3%;
+    max-width: 220px;
+    color: rgb(92, 92, 92);
+}
+
+#selector a {
+	text-decoration: none; /* prevent the link from being underscored */
+}
+
+#selector ul {
+	list-style: none outside;
+    margin-bottom: 15%;
+	border: 0;
+	padding: 0;
+}
+
+#selector li {
+	display: table;
+	/*text-align: center;*/
+	vertical-align: middle;
+    line-height: 150%;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+#selector li.selected {
+    font-weight: bold;
+    color: rgb(134,134,134);
+}
+
+#selector li.selected2 {
+    color: rgb(134,134,134);
+}

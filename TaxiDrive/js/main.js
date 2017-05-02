@@ -32,9 +32,15 @@ class TaxiDrive
         this.width -= this.margin.left + this.margin.right;
         this.height -= this.margin.top + this.margin.bottom;
 
+        d3.select('#selector')
+            .style('left', this.width * 0.03 + 'px');
+
         this.m1 = new Object();
         this.m2 = new Object();
         this.mSelect = 2;
+
+        d3.select('#selector-map' + this.mSelect)
+            .classed('selected', true);
 
         // scaling
         this.longiRange = [116, 116.8];
@@ -65,10 +71,9 @@ class TaxiDrive
         {
             let opacityPerSec = 0.5;
             let opacityPerTick = Math.pow(opacityPerSec, 1 / tickPerSec);
-            let backColor = opacity2color(opacityPerTick);
+            let backColor = 0;//opacity2color(opacityPerTick);
             this.m1.refreshColor = 'rgba(0,0,0,' + (1 - opacityPerTick) + ')';
             this.m1.backColor = 'rgb(' + backColor + ',' + backColor + ',' + backColor + ')';
-            //this.m1.dotColor = 'rgb(255, 255, 128)';
         }
 
         {
@@ -76,20 +81,91 @@ class TaxiDrive
         }
     }
 
+    // Helper methods
+    initCanvas()
+    {
+        let mSelect = this.mSelect;
+        let m = this['m' + mSelect];
+
+        this.context.fillStyle = m.backColor;
+        this.context.fillRect(-this.margin.left, -this.margin.top,
+        this.canvas.attr('width'), this.canvas.attr('height'));
+    }
+
     // Main methods
     initialize(data)
     {
+        let that = this;
+        let width = this.width;
+        let height = this.height;
+        let margin = this.margin;
+        let context = this.context;
+
         // initialize data
         data.nodes = new Array();
         data.index = 0;
         data.ts = 0;
         data.tsupper = 0;
+        data.pause = false;
+        data.switchDay = 0;
 
         // initialize cumulate map
-        data.cumulateMap = new Array(this.width * this.height);
+        data.instantImage = null;
+        data.cumulateMap = new Array(width * height);
         data.cumulateMap.fill(0);
-        data.cumulateImage = this.context.createImageData(this.width, this.height);
+        data.cumulateImage = context.createImageData(width, height);
         canvasImageInit(data.cumulateImage);
+
+        // setup click event
+        let selector_map1 = d3.select('#selector-map1');
+        let selector_map2 = d3.select('#selector-map2');
+
+        selector_map1.on('click', function()
+        {
+            that.mSelect = 1;
+            selector_map1.classed('selected', true);
+            selector_map2.classed('selected', false);
+            that.initCanvas();
+            if(data.instantImage)
+                context.putImageData(data.instantImage, margin.left, margin.top);
+        });
+
+        selector_map2.on('click', function()
+        {
+            that.mSelect = 2;
+            selector_map1.classed('selected', false);
+            selector_map2.classed('selected', true);
+            data.instantImage = context.getImageData(margin.left, margin.top, width, height);
+            that.initCanvas();
+            context.putImageData(data.cumulateImage, margin.left, margin.top);
+        });
+
+        d3.select('#selector-pause').on('click', function()
+        {
+            data.pause = !data.pause;
+            d3.select(this).classed('selected2', data.pause);
+        });
+
+        d3.select('#selector-map2reset').on('click', function()
+        {
+            let thisD3 = d3.select(this);
+            thisD3.classed('selected2', true);
+            setTimeout(function(){ thisD3.classed('selected2', false); }, 500);
+            data.cumulateMap.fill(0);
+            canvasImageInit(data.cumulateImage);
+        });
+
+        // data switch event
+        for(let day = 1; day < 8; ++day)
+        {
+            d3.select('#selector-day' + day).on('click', function()
+            {
+                let thisD3 = d3.select(this);
+                thisD3.classed('selected2', true);
+                setTimeout(function(){ thisD3.classed('selected2', false); }, 500);
+                data.switchDay = day;
+            });
+        }
     }
 
     load(data)
@@ -125,6 +201,12 @@ class TaxiDrive
         {
             function handler()
             {
+                if(data.switchDay > 0)
+                { // handle data switch event
+                    data.csvNo = data.switchDay;
+                    data.index = data.nodes.length;
+                    data.switchDay = 0;
+                }
                 if(data.index < data.nodes.length)
                 { // when current data is still drawing, wait for next check
                     setTimeout(handler, that.checkDuration);
@@ -146,12 +228,8 @@ class TaxiDrive
     {
         let that = this;
         let dateTime = '';
-        let mSelect = that.mSelect;
-        let m = that['m' + mSelect];
 
-        this.context.fillStyle = m.backColor;
-        this.context.fillRect(-that.margin.left, -that.margin.top,
-            that.canvas.attr('width'), that.canvas.attr('height'));
+        this.initCanvas();
 
         // draw animation up to the limitation of display refreshing
         d3.interval(function(elapsed)
@@ -162,6 +240,8 @@ class TaxiDrive
             let m = that['m' + mSelect];
             let width = that.width;
             let height = that.height;
+            let margin = that.margin;
+            let canvas = that.canvas;
 
             // assign from data
             let nodes = data.nodes;
@@ -179,15 +259,15 @@ class TaxiDrive
             // Canvas refreshing
             let context = that.context;
 
-            if(mSelect === 1)
+            if(!data.pause && mSelect === 1)
             {
-                context.fillStyle = that.m1.refreshColor;
-                context.fillRect(-that.margin.left, -that.margin.top,
-                    that.canvas.attr('width'), that.canvas.attr('height'));
+                context.fillStyle = m1.refreshColor;
+                context.fillRect(-margin.left, -margin.top,
+                    canvas.attr('width'), canvas.attr('height'));
             }
 
             // Canvas drawing
-            while(++index < length)
+            if(!data.pause) while(++index < length)
             {
                 let d = nodes[index];
                 ts = +d.Timestamp;
@@ -224,19 +304,22 @@ class TaxiDrive
             }
 
             // draw to cumulate map
-            if(mSelect === 2)
+            if(!data.pause && mSelect === 2)
             {
-                context.putImageData(cumulateImage, 0, 0);
+                context.putImageData(cumulateImage, margin.left, margin.top);
             }
 
             // draw DateTime
             if(index < length && index > 1) dateTime = nodes[index - 1].DateTime;
-            canvasDrawText(context, dateTime, m.backColor, 10, 20, 15);
+            canvasDrawText(context, dateTime, m.backColor, width * 0.025, width * 0.03, 16);
 
             // assign to data
-            data.index = index;
-            data.ts = ts;
-            data.tsupper = tsupper;
+            if(!data.pause)
+            {
+                data.index = index;
+                data.ts = ts;
+                data.tsupper = tsupper;
+            }
         }, that.simTick);
     }
 
